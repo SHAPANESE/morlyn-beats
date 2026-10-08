@@ -72,6 +72,13 @@ def main():
                 context.route('**/backend-config.js', lambda route: route.fulfill(content_type='application/javascript', body="window.MORLYN_BACKEND={url:'https://morlyn-test.supabase.co',publishableKey:'sb_publishable_test',bucket:'portfolio',maxFileBytes:52428800,passwordRecoveryEnabled:false}"))
                 context.route('https://*.supabase.co/**', remote)
                 context.route('https://i.ytimg.com/vi/**', lambda route: route.fulfill(content_type='image/png', body=image.getvalue(), headers={'Access-Control-Allow-Origin':'*'}))
+                context.route('https://www.youtube.com/iframe_api', lambda route: route.fulfill(content_type='application/javascript', body='''window.YT={Player:class {
+                  constructor(frame,options){this.frame=frame;this.events=options.events;this.state=2;this.current=0;this.muted=false;window.testYTPlayer=this;setTimeout(()=>this.events.onReady({target:this}),0)}
+                  getPlayerState(){return this.state} getDuration(){return 120} getCurrentTime(){return this.current} isMuted(){return this.muted}
+                  playVideo(){this.state=1;this.events.onStateChange({data:1})} pauseVideo(){this.state=2;this.events.onStateChange({data:2})}
+                  mute(){this.muted=true} unMute(){this.muted=false} seekTo(value){this.current=value}
+                  destroy(){this.frame.remove();this.destroyed=true}
+                }};window.onYouTubeIframeAPIReady();'''))
                 context.route('https://www.youtube-nocookie.com/**', lambda route: route.fulfill(content_type='text/html', body='''<html><body style="margin:0;background:#18334d"><svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="#f5c865" stroke-width="2"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid)"/></svg><button style="position:absolute;left:45%;bottom:30px" onclick="this.textContent='PLAYING'">PLAY</button></body></html>'''))
                 page = context.new_page(); page.on('pageerror', lambda error: errors.append(str(error)))
                 page.goto(origin+'/admin.html')
@@ -95,17 +102,26 @@ def main():
                 expect(gallery.locator('.portfolio-card img')).to_have_js_property('naturalWidth',320)
                 assert not upload_requests
                 gallery.locator('.work-open').click(force=True)
-                expect(gallery.locator('.work-player iframe')).to_have_attribute('src','https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0')
+                expect(gallery.locator('.work-player iframe')).to_have_attribute('src','https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0&controls=0&enablejsapi=1&origin='+origin.replace(':','%3A').replace('/','%2F'))
                 expect(gallery.locator('.work-player-description')).to_have_text('Texto del video <sin HTML>')
                 expect(gallery.locator('.work-player-external')).to_have_count(0)
                 assert 'polygon(' in gallery.locator('.work-player-media').evaluate('(node)=>getComputedStyle(node).clipPath')
-                play = gallery.frame_locator('.work-player iframe').get_by_role('button',name='PLAY',exact=True)
-                play.click()
-                expect(gallery.frame_locator('.work-player iframe').get_by_role('button',name='PLAYING')).to_be_visible()
+                play = gallery.get_by_role('button',name='Reproducir video',exact=True)
+                expect(play).to_be_enabled()
+                play.click(force=True)
+                expect(gallery.get_by_role('button',name='Pausar video',exact=True)).to_be_enabled()
+                gallery.get_by_role('button',name='Pausar video',exact=True).click(force=True)
+                expect(gallery.get_by_role('button',name='Reproducir video',exact=True)).to_be_enabled()
+                gallery.get_by_role('button',name='Silenciar video',exact=True).click(force=True)
+                expect(gallery.get_by_role('button',name='Activar sonido',exact=True)).to_be_enabled()
+                gallery.locator('.work-player-seek').evaluate("node=>{node.value='50';node.dispatchEvent(new Event('input',{bubbles:true}))}")
+                expect(gallery.locator('.work-player-time')).to_have_text('01:00 / 02:00')
+                assert gallery.evaluate("getComputedStyle(document.querySelector('.work-player-media'),'::after').pointerEvents") == 'none'
                 gallery.screenshot(path=str(ROOT/'tests-client/youtube-player.png'))
                 box = gallery.locator('.work-player iframe').bounding_box(); assert box['height'] >= 200 and box['width'] >= 200
                 gallery.locator('.work-player-back').click(force=True)
                 expect(gallery.locator('.work-player')).to_have_count(0)
+                assert gallery.evaluate('window.testYTPlayer.destroyed')
                 gallery.set_viewport_size({'width':390,'height':844})
                 gallery.locator('.work-open').click(force=True)
                 mobile_box = gallery.locator('.work-player iframe').bounding_box()
@@ -114,6 +130,15 @@ def main():
                 gallery.screenshot(path=str(ROOT/'tests-client/youtube-player-mobile.png'))
                 gallery.locator('.work-player-back').click(force=True)
                 gallery.set_viewport_size({'width':1440,'height':1000})
+                context.route('https://www.youtube.com/iframe_api', lambda route: route.abort())
+                fallback_page = context.new_page()
+                fallback_page.on('pageerror', lambda error: errors.append(str(error)))
+                fallback_page.goto(origin+'/motion-graphics.html')
+                fallback_page.locator('.work-open').click(force=True)
+                expect(fallback_page.locator('.work-player iframe')).to_have_attribute('src','https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0')
+                expect(fallback_page.locator('.work-player-controls')).to_have_count(0)
+                fallback_page.locator('.work-player-back').click(force=True)
+                fallback_page.close()
                 context.route('https://i.ytimg.com/vi/**', lambda route: route.fulfill(status=404))
                 gallery.reload()
                 expect(gallery.locator('.portfolio-card img')).to_have_attribute('src','assets/youtube-preview.svg')

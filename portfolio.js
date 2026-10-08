@@ -56,6 +56,7 @@ if (portfolioGrid) {
     if (youtube) {
       full.className = 'work-player-youtube';
       full.src = window.morlynYouTube.embed(work.videoId);
+      full.src += '&controls=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin);
       full.title = work.title || 'Video de YouTube';
       full.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
       full.allowFullscreen = true;
@@ -94,6 +95,7 @@ if (portfolioGrid) {
     }
     const listener = new AbortController();
     let releaseCurve = () => {};
+    let releaseYouTube = () => {};
     const proxy = document.querySelector('.crt-action-hit');
     const copy = document.querySelector('.hero-copy');
     const close = () => {
@@ -101,6 +103,7 @@ if (portfolioGrid) {
       if (document.fullscreenElement === hero) document.exitFullscreen().catch(() => {});
       listener.abort();
       releaseCurve();
+      releaseYouTube();
       player.remove();
       window.dispatchEvent(new Event('morlyn-work-changed'));
       document.body.classList.remove('work-is-open');
@@ -173,7 +176,13 @@ if (portfolioGrid) {
     if (proxy) proxy.inert = true;
     document.body.classList.add('work-is-open');
     hero.appendChild(player);
-    if (youtube) releaseCurve = curveYouTube(mediaArea);
+    if (youtube) {
+      releaseCurve = curveYouTube(mediaArea);
+      import('./youtube-player.js').then(({mountYouTubeControls}) => {
+        if (!player.isConnected) return;
+        releaseYouTube = mountYouTubeControls({iframe: full, container: player, fullscreenTarget: hero, status, fallbackUrl: window.morlynYouTube.embed(work.videoId)});
+      }).catch(() => { if (full.isConnected) full.src = window.morlynYouTube.embed(work.videoId); });
+    }
     window.dispatchEvent(new Event('morlyn-work-changed'));
     back.focus({ preventScroll: true });
     if (work.type === 'video') full.play().catch(() => {});

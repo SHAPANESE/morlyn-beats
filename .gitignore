@@ -5,3 +5,4 @@ Thumbs.db
 .venv/
 __pycache__/
 *.pyc
+*.local.sql

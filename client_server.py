@@ -183,7 +183,7 @@ def create_app(data_dir=None, secure=None):
             "X-Content-Type-Options": "nosniff",
             "X-Frame-Options": "DENY",
             "Referrer-Policy": "same-origin",
-            "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            "Content-Security-Policy": "default-src 'self'; script-src 'self' https://www.youtube.com; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
             "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
         })
         if request.path.startswith(("/api/", "/media/", "/cliente", "/admin.html")):
@@ -504,7 +504,7 @@ def create_app(data_dir=None, secure=None):
     def existing_asset(filename):
         # Explicit whitelist prevents serving credentials, source, uploads and backups.
         allowed = {"index.html", "video-tv.html", "video-redes.html", "animacion-3d.html", "motion-graphics.html",
-                   "styles.css", "display.css", "admin.css", "admin.js", "admin-cloud.js", "script.js", "portfolio.js", "crt-pipeline.js",
+                   "styles.css", "display.css", "admin.css", "admin.js", "admin-cloud.js", "youtube-player.js", "script.js", "portfolio.js", "crt-pipeline.js",
                    "three-scene.js", "vhs-clock.js", "backend-config.js", "backend.js", "works.json"}
         is_asset = filename.startswith("assets/") and Path(filename).suffix.lower() in {".ttf", ".woff2", ".svg", ".png", ".jpg", ".webp", ".mp4", ".wav", ".m4a"}
         is_vendor = filename.startswith("vendor/") and Path(filename).suffix.lower() == ".js"

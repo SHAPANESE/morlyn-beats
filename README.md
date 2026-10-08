@@ -28,4 +28,4 @@ Without backend configuration, galleries use `works.json` by channel (01: TV, 02
 
 Selecting a thumbnail or its caption replaces the gallery with the work inside the same CRT channel. Images, video and controls pass through the screen's existing curvature and texture, while the VHS counter keeps running. Videos have play/pause, seeking, sound and fullscreen controls. Return with "Volver a trabajos" or Escape; leaving stops playback and returns focus to the selected work. Empty placeholders show a clearly labeled demo image until real media is added.
 
-YouTube works use their actual thumbnail with a fallback cover. The embedded player keeps native controls and a curved glass outline; its cross-origin video pixels are not rendered through the WebGL CRT shader.
+YouTube works use their actual thumbnail with a fallback cover. The embedded player uses simple play/pause, sound, seek and fullscreen controls, a curved glass outline and a decorative CRT layer. It falls back to native controls if the YouTube API is unavailable. Its cross-origin video pixels are not rendered through the WebGL CRT shader.
