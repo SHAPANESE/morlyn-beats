@@ -31,6 +31,7 @@ if (output) {
 
       uniform sampler2D u_texture;
       uniform vec2 u_resolution;
+      uniform vec2 u_screen_resolution;
       uniform float u_time;
       varying vec2 v_uv;
 
@@ -69,7 +70,7 @@ if (output) {
           return;
         }
 
-        vec2 texel = 1.0 / u_resolution;
+        vec2 texel = 1.0 / u_screen_resolution;
         vec3 color = sampleSource(uv);
 
         vec3 bloom = color * 0.36;
@@ -79,7 +80,7 @@ if (output) {
         bloom += sampleSource(uv - vec2(0.0, texel.y * 2.4)) * 0.16;
         color += max(bloom - 0.34, 0.0) * 0.62;
 
-        float horizontalRow = fract(uv.y * u_resolution.y * 0.34);
+        float horizontalRow = fract(uv.y * u_screen_resolution.y * 0.34);
         float scanline = mix(0.82, 1.0, smoothstep(0.10, 0.62, horizontalRow));
         color *= scanline;
 
@@ -127,6 +128,7 @@ if (output) {
       const uvLocation = gl.getAttribLocation(program, 'a_uv');
       const textureLocation = gl.getUniformLocation(program, 'u_texture');
       const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
+      const screenResolutionLocation = gl.getUniformLocation(program, 'u_screen_resolution');
       const timeLocation = gl.getUniformLocation(program, 'u_time');
 
       const quad = gl.createBuffer();
@@ -154,6 +156,13 @@ if (output) {
       let viewportWidth = 1;
       let viewportHeight = 1;
       let layout = null;
+      let rectCache = new WeakMap();
+      let fontCache = new WeakMap();
+      let playerControlLayout = null;
+      let sourceDirty = true;
+      let sourceNeedsUpload = true;
+      let lastSourceKey = '';
+      let titleCharacterCount = 0;
       let textureWidth = 0;
       let textureHeight = 0;
       const startTime = performance.now();
@@ -188,6 +197,14 @@ if (output) {
         return { left: rect.left, right: rect.right, top: rect.top - heroTop, bottom: rect.bottom - heroTop, width: rect.width, height: rect.height };
       };
 
+      const cachedRectOf = target => {
+        const node = typeof target === 'string' ? document.querySelector(target) : target;
+        if (!node) return null;
+        if (!rectCache.has(node)) rectCache.set(node, rectOf(node));
+        return rectCache.get(node);
+      };
+      const invalidateSource = () => { sourceDirty = true; };
+
       let actionHit;
       let portfolioNeedsAlignment = true;
       const screenPoint = (x, y) => {
@@ -221,6 +238,8 @@ if (output) {
           card.crtLayout = { rect, media: mediaRects[index], caption: captionRects[index] };
         });
         portfolioNeedsAlignment = false;
+        rectCache = new WeakMap();
+        sourceDirty = true;
       };
       const updateActionHit = () => {
         if (!actionHit || !layout?.instagram.node) return;
@@ -263,6 +282,7 @@ if (output) {
       };
 
       const readLayout = () => {
+        titleCharacterCount = [...document.querySelectorAll('.hero-title .line')].reduce((count, node) => count + node.textContent.trim().length + 1, 0);
         layout = {
           eyebrow: { node: document.querySelector('.eyebrow'), rect: rectOf('.eyebrow') },
           title: document.querySelectorAll('.hero-title .line'),
@@ -280,7 +300,15 @@ if (output) {
       const resize = () => {
         viewportWidth = Math.max(window.innerWidth, 1);
         viewportHeight = Math.max(window.innerHeight, 1);
-        renderScale = isFirefox ? 0.7 : Math.min(window.devicePixelRatio || 1, 1);
+        // Keep the CRT render budget bounded on large monitors; its silhouette
+        // and scanlines still use CSS screen dimensions, independent of this scale.
+        renderScale = Math.min(isFirefox ? .7 : 1,
+          1600 / Math.max(viewportWidth, viewportHeight),
+          Math.sqrt(1200000 / (viewportWidth * viewportHeight)));
+        rectCache = new WeakMap();
+        fontCache = new WeakMap();
+        playerControlLayout = null;
+        sourceDirty = true;
         output.width = Math.max(1, Math.round(viewportWidth * renderScale));
         output.height = Math.max(1, Math.round(viewportHeight * renderScale));
         source.width = output.width;
@@ -290,22 +318,27 @@ if (output) {
         gl.viewport(0, 0, output.width, output.height);
         readLayout();
         portfolioNeedsAlignment = true;
+        updateActionHit();
       };
 
       const cssFont = (node, fallback = 'DM Mono') => {
-        const style = node ? getComputedStyle(node) : null;
+        if (node && fontCache.has(node)) return fontCache.get(node);
+        const computed = node ? getComputedStyle(node) : null;
+        const style = computed ? Object.fromEntries(['fontSize', 'fontWeight', 'fontFamily', 'fontStyle', 'color', 'lineHeight', 'paddingLeft', 'paddingTop'].map(key => [key, computed[key]])) : null;
         const size = style ? parseFloat(style.fontSize) : 10;
         const weight = style?.fontWeight || '500';
         const family = style?.fontFamily || fallback;
-        return { style, size, font: `${weight} ${size}px ${family}` };
+        const result = { style, size, font: `${style?.fontStyle || 'normal'} ${weight} ${size}px ${family}` };
+        if (node) fontCache.set(node, result);
+        return result;
       };
 
       const drawTrackedText = (context, text, x, y, tracking) => {
         let cursorX = x;
-        [...text].forEach((character) => {
+        for (const character of text) {
           context.fillText(character, cursorX, y);
           cursorX += context.measureText(character).width + tracking;
-        });
+        }
       };
 
       const trackedWidth = (context, text, tracking) => {
@@ -347,7 +380,7 @@ if (output) {
           ? Infinity : Math.max(0, Math.floor((elapsed - 0.22) / 0.075));
         let characterOffset = 0;
         [...layout.title].forEach((line) => {
-          const rect = rectOf(line);
+          const rect = cachedRectOf(line);
           const fullText = line.textContent.trim();
           const localVisible = Math.max(0, Math.min(fullText.length, visibleCharacters - characterOffset));
           const visibleText = fullText.slice(0, localVisible);
@@ -388,7 +421,7 @@ if (output) {
       const drawWorkCards = () => {
         const grid = document.querySelector('.portfolio-grid');
         if (!grid) return;
-        const gridRect = rectOf(grid);
+        const gridRect = cachedRectOf(grid);
         sourceContext.save();
         sourceContext.beginPath();
         sourceContext.rect(gridRect.left, gridRect.top, gridRect.width, gridRect.height);
@@ -458,7 +491,7 @@ if (output) {
           sourceContext.restore();
           const caption = card.querySelector('figcaption');
           if (caption && bounds.caption) {
-            const paddingTop = parseFloat(getComputedStyle(caption).paddingTop) || 0;
+            const paddingTop = parseFloat(cssFont(caption).style.paddingTop) || 0;
             drawLabel(caption, { ...bounds.caption, top: bounds.caption.top + paddingTop }, undefined, { tracking: .08, blur: 3, color: active ? '#e95c38' : undefined });
           }
         });
@@ -471,12 +504,12 @@ if (output) {
         drawWorkCards();
         const kicker = portfolio.querySelector('.portfolio-kicker');
         const heading = portfolio.querySelector('h2');
-        drawLabel(kicker, rectOf(kicker), undefined, { color: '#e95c38', tracking: 0.16 });
-        drawLabel(heading, rectOf(heading), undefined, { tracking: 0.12 });
+        drawLabel(kicker, cachedRectOf(kicker), undefined, { color: '#e95c38', tracking: 0.16 });
+        drawLabel(heading, cachedRectOf(heading), undefined, { tracking: 0.12 });
 
         const empty = portfolio.querySelector('.portfolio-empty');
         if (!empty || empty.hidden) return;
-        const rect = rectOf(empty);
+        const rect = cachedRectOf(empty);
         const { style, size, font } = cssFont(empty);
         const paddingX = parseFloat(style.paddingLeft) || 0;
         const paddingY = parseFloat(style.paddingTop) || 0;
@@ -506,7 +539,7 @@ if (output) {
       };
 
       const drawWorkPlayer = player => {
-        const area = rectOf(player.querySelector('.work-player-media'));
+        const area = cachedRectOf(player.querySelector('.work-player-media'));
         const media = player.querySelector('img, video');
         const ready = media.tagName === 'IMG' ? media.complete && media.naturalWidth : media.readyState >= 2;
         if (ready) {
@@ -523,7 +556,7 @@ if (output) {
         for (const selector of ['.work-player-kicker', '.work-player-title', '.work-player-status', '.work-player-time']) {
           const node = player.querySelector(selector);
           if (!node || node.hidden) continue;
-          const rect = rectOf(node);
+          const rect = cachedRectOf(node);
           sourceContext.save();
           sourceContext.beginPath();
           sourceContext.rect(rect.left, rect.top, rect.width, rect.height);
@@ -532,16 +565,25 @@ if (output) {
           sourceContext.restore();
         }
         const controls = [...player.querySelectorAll('button, input')];
-        controls.forEach(node => { node.style.transform = 'none'; });
-        const rects = controls.map(rectOf);
+        const key = controls.filter(node => node.tagName === 'BUTTON').map(node => node.textContent).join('|');
+        if (playerControlLayout?.player !== player || playerControlLayout.key !== key) {
+          controls.forEach(node => { node.style.transform = 'none'; });
+          const rects = controls.map(rectOf);
+          controls.forEach((node, index) => {
+            const rect = rects[index];
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            const center = screenPoint(x, y);
+            const dx = screenPoint(x + 1, y);
+            const dy = screenPoint(x, y + 1);
+            node.style.transform = `matrix(${dx.x - center.x}, ${dx.y - center.y}, ${dy.x - center.x}, ${dy.y - center.y}, ${center.x - x}, ${center.y - y})`;
+          });
+          rectCache = new WeakMap();
+          playerControlLayout = { player, key, rects };
+        }
         controls.forEach((node, index) => {
-          const rect = rects[index];
-          const x = rect.left + rect.width / 2;
+          const rect = playerControlLayout.rects[index];
           const y = rect.top + rect.height / 2;
-          const center = screenPoint(x, y);
-          const dx = screenPoint(x + 1, y);
-          const dy = screenPoint(x, y + 1);
-          node.style.transform = `matrix(${dx.x - center.x}, ${dx.y - center.y}, ${dy.x - center.x}, ${dy.y - center.y}, ${center.x - x}, ${center.y - y})`;
           const active = node.matches(':hover, :focus-visible');
           if (node.tagName === 'INPUT') {
             const progress = Number(node.value) / 100;
@@ -551,7 +593,7 @@ if (output) {
             sourceContext.fillRect(rect.left, y - 1, rect.width * progress, 2);
             sourceContext.fillRect(rect.left + rect.width * progress - 2, y - 4, 4, 8);
           } else {
-            const style = getComputedStyle(node);
+            const { style } = cssFont(node);
             const textRect = { ...rect, left: rect.left + (parseFloat(style.paddingLeft) || 0), top: rect.top + (parseFloat(style.paddingTop) || 0) };
             drawLabel(node, textRect, undefined, { color: active ? '#ff6842' : undefined, tracking: .08 });
             if (active || node.classList.contains('work-player-back')) {
@@ -567,7 +609,7 @@ if (output) {
         if (player) drawWorkPlayer(player);
         else {
         const eyebrow = layout.eyebrow;
-        drawLabel(eyebrow.node, rectOf(eyebrow.node), undefined, {
+        drawLabel(eyebrow.node, cachedRectOf(eyebrow.node), undefined, {
           color: '#e95c38',
           glow: 'rgba(233, 92, 56, .55)',
           tracking: 0.14,
@@ -577,7 +619,7 @@ if (output) {
         drawPortfolio();
 
         layout.services.forEach((service, index) => {
-          const rect = rectOf(service);
+          const rect = cachedRectOf(service);
           const { size, font } = cssFont(service);
           sourceContext.font = font;
           sourceContext.textBaseline = 'top';
@@ -600,7 +642,7 @@ if (output) {
           sourceContext.stroke();
         });
 
-        drawLabel(layout.portfolioLink.node, rectOf(layout.portfolioLink.node));
+        drawLabel(layout.portfolioLink.node, cachedRectOf(layout.portfolioLink.node));
 
         const description = layout.description;
         if (description.node && description.rect && description.node.textContent.trim()) {
@@ -624,7 +666,7 @@ if (output) {
           if (line) sourceContext.fillText(line, description.rect.left, y);
         }
 
-        const instagram = { ...layout.instagram, rect: rectOf(layout.instagram.node) };
+        const instagram = { ...layout.instagram, rect: cachedRectOf(layout.instagram.node) };
         const actionActive = actionHit?.matches(':hover, :focus-visible');
         drawLabel(instagram.node, instagram.rect, instagram.node?.textContent?.trim(), {
           tracking: 0.1,
@@ -647,7 +689,7 @@ if (output) {
         const jp = layout.japanese;
         const channelIdent = document.querySelector('.channel-ident.is-visible');
         if (channelIdent) {
-          drawLabel(channelIdent, rectOf(channelIdent), undefined, { tracking: -0.06, color: '#efd2aa' });
+          drawLabel(channelIdent, cachedRectOf(channelIdent), undefined, { tracking: -0.06, color: '#efd2aa' });
         }
         if (jp.node && jp.rect && !channelIdent) {
           const { size, font } = cssFont(jp.node, 'sans-serif');
@@ -693,6 +735,7 @@ if (output) {
       };
 
       const drawSource = (elapsed) => {
+        sourceNeedsUpload = true;
         sourceContext.setTransform(1, 0, 0, 1, 0, 0);
         sourceContext.fillStyle = '#050505';
         sourceContext.fillRect(0, 0, source.width, source.height);
@@ -724,33 +767,57 @@ if (output) {
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        if (textureWidth !== source.width || textureHeight !== source.height) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-          textureWidth = source.width;
-          textureHeight = source.height;
-        } else {
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        if (sourceNeedsUpload) {
+          if (textureWidth !== source.width || textureHeight !== source.height) {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+            textureWidth = source.width;
+            textureHeight = source.height;
+          } else {
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+          }
+          sourceNeedsUpload = false;
         }
 
         gl.uniform1i(textureLocation, 0);
         gl.uniform2f(resolutionLocation, output.width, output.height);
+        gl.uniform2f(screenResolutionLocation, viewportWidth, viewportHeight);
         gl.uniform1f(timeLocation, elapsed);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       };
 
       let previousFrame = 0;
-      const frameInterval = 1000 / 30;
-
-      const frame = (now) => {
-        if (now - previousFrame >= frameInterval) {
-          previousFrame = now;
+      let animationFrame;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const frame = now => {
+        if (document.hidden) { animationFrame = undefined; return; }
+        const interval = 1000 / (reducedMotion.matches ? 15 : 30);
+        const delta = now - previousFrame;
+        if (delta >= interval - .5) {
+          previousFrame = now - (delta >= interval ? delta % interval : 0);
           const elapsed = (now - startTime) / 1000;
           if (portfolioNeedsAlignment) alignPortfolioCards();
-          drawSource(elapsed);
+          const player = document.querySelector('.work-player');
+          const video = player?.querySelector('video');
+          const typing = document.documentElement.classList.contains('channel-arrival')
+            ? titleCharacterCount : Math.min(titleCharacterCount, Math.max(0, Math.floor((elapsed - .22) / .075)));
+          const flicker = getFlickerState(elapsed);
+          const key = [window.morlynVhsSeconds(), player ? 'work' : typing,
+            !player && flicker.active ? Math.floor(flicker.phase * 30) : -1,
+            !!document.querySelector('.channel-ident.is-visible')].join('|');
+          if (sourceDirty || key !== lastSourceKey || (video && !video.paused && !video.ended && video.readyState >= 2)) {
+            drawSource(elapsed);
+            sourceDirty = false;
+            lastSourceKey = key;
+          }
           drawShader(elapsed);
-          updateActionHit();
         }
-        requestAnimationFrame(frame);
+        animationFrame = requestAnimationFrame(frame);
+      };
+      const resumeFrames = () => {
+        if (document.hidden || animationFrame !== undefined) return;
+        previousFrame = performance.now() - 1000 / 30;
+        sourceDirty = true;
+        animationFrame = requestAnimationFrame(frame);
       };
 
       const start = async () => {
@@ -761,7 +828,9 @@ if (output) {
         document.documentElement.classList.add('canvas-crt-ready');
         prepareActionHit();
         alignPortfolioCards();
-        window.addEventListener('morlyn-portfolio-ready', () => { portfolioNeedsAlignment = true; });
+        window.addEventListener('morlyn-portfolio-ready', () => { portfolioNeedsAlignment = true; sourceDirty = true; });
+        window.addEventListener('morlyn-work-changed', () => { playerControlLayout = null; rectCache = new WeakMap(); sourceDirty = true; });
+        for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout', 'input', 'load', 'loadeddata', 'loadedmetadata', 'seeked', 'volumechange', 'durationchange', 'play', 'pause', 'ended', 'timeupdate', 'error']) document.addEventListener(name, invalidateSource, true);
         document.querySelector('.portfolio-grid')?.addEventListener('scroll', () => { portfolioNeedsAlignment = true; }, { passive: true });
         window.morlynCaptureCrt = () => {
           const elapsed = (performance.now() - startTime) / 1000;
@@ -774,7 +843,14 @@ if (output) {
           return snapshot.toDataURL('image/jpeg', .7);
         };
         window.addEventListener('resize', resize, { passive: true });
-        requestAnimationFrame(frame);
+        document.fonts?.addEventListener('loadingdone', resize);
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) { cancelAnimationFrame(animationFrame); animationFrame = undefined; }
+          else resumeFrames();
+        });
+        window.addEventListener('pagehide', () => { cancelAnimationFrame(animationFrame); animationFrame = undefined; });
+        window.addEventListener('pageshow', resumeFrames);
+        resumeFrames();
       };
 
       start();

@@ -54,6 +54,7 @@ if (portfolioGrid) {
       if (document.fullscreenElement === hero) document.exitFullscreen().catch(() => {});
       listener.abort();
       player.remove();
+      window.dispatchEvent(new Event('morlyn-work-changed'));
       document.body.classList.remove('work-is-open');
       portfolio.inert = false;
       if (copy) copy.inert = false;
@@ -123,6 +124,7 @@ if (portfolioGrid) {
     if (proxy) proxy.inert = true;
     document.body.classList.add('work-is-open');
     hero.appendChild(player);
+    window.dispatchEvent(new Event('morlyn-work-changed'));
     back.focus({ preventScroll: true });
     if (work.type === 'video') full.play().catch(() => {});
   };

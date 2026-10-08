@@ -390,6 +390,8 @@ a, button { cursor: pointer; }
   filter: none !important;
   will-change: auto;
 }
+.canvas-crt-ready .simple-screen, .canvas-crt-ready .simple-screen * { animation: none !important; }
+.canvas-crt-ready .simple-screen .char { opacity: 1; }
 .canvas-crt-ready .crt-overlay { display: none; }
 .canvas-crt-ready #top .noise { display: none; }
 .simple-screen {

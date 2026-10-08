@@ -95,8 +95,8 @@ const channelNumber = document.createElement('span');
 channelNumber.className = 'channel-number';
 const staticCanvas = document.createElement('canvas');
 staticCanvas.className = 'channel-static';
-staticCanvas.width = 480;
-staticCanvas.height = 270;
+staticCanvas.width = 384;
+staticCanvas.height = 216;
 const channelOsd = document.createElement('canvas');
 channelOsd.className = 'channel-osd';
 channelOsd.width = 480;
@@ -119,25 +119,29 @@ const resizeCrtFrame = () => {
   if (!frameContext) return;
   crtFrame.width = Math.max(1, Math.round(window.innerWidth));
   crtFrame.height = Math.max(1, Math.round(window.innerHeight));
-  const mask = frameContext.createImageData(crtFrame.width, crtFrame.height);
-  for (let y = 0; y < crtFrame.height; y += 1) {
-    const cy = (y + .5) / crtFrame.height * 2 - 1;
-    for (let x = 0; x < crtFrame.width; x += 1) {
-      const cx = (x + .5) / crtFrame.width * 2 - 1;
-      const curve = 1 + (cx * cx + cy * cy) * .115;
-      const dx = Math.abs(cx) - .985 + .135;
-      const dy = Math.abs(cy) - .975 + .135;
-      const roundedDistance = Math.min(Math.max(dx, dy), 0) + Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) - .135;
-      if (roundedDistance > 0 || Math.abs(cx * curve) > 1 || Math.abs(cy * curve) > 1) {
-        const offset = (y * crtFrame.width + x) * 4;
-        mask.data[offset] = 1;
-        mask.data[offset + 1] = 1;
-        mask.data[offset + 2] = 1;
-        mask.data[offset + 3] = 255;
-      }
+  // Trace the same CRT bounds as the shader instead of visiting every pixel.
+  const halfWidthAt = row => {
+    const cy = Math.abs(row / crtFrame.height * 2 - 1);
+    if (cy >= .975) return 0;
+    const rounded = cy <= .84 ? .985 : .85 + Math.sqrt(Math.max(0, .135 ** 2 - (cy - .84) ** 2));
+    const linear = 1 + .115 * cy * cy;
+    let x = 1 / linear;
+    for (let step = 0; step < 5; step += 1) {
+      x -= (linear * x + .115 * x ** 3 - 1) / (linear + .345 * x * x);
     }
-  }
-  frameContext.putImageData(mask, 0, 0);
+    const vertical = cy === 0 ? 1 : Math.sqrt(Math.max(0, (1 / cy - 1) / .115 - cy * cy));
+    return Math.max(0, Math.min(rounded, x, vertical)) * crtFrame.width / 2;
+  };
+  frameContext.clearRect(0, 0, crtFrame.width, crtFrame.height);
+  frameContext.beginPath();
+  frameContext.rect(0, 0, crtFrame.width, crtFrame.height);
+  const centerX = crtFrame.width / 2;
+  frameContext.moveTo(centerX, 0);
+  for (let y = 0; y <= crtFrame.height; y += 1) frameContext.lineTo(centerX + halfWidthAt(y), y);
+  for (let y = crtFrame.height; y >= 0; y -= 1) frameContext.lineTo(centerX - halfWidthAt(y), y);
+  frameContext.closePath();
+  frameContext.fillStyle = '#010101';
+  frameContext.fill('evenodd');
 };
 resizeCrtFrame();
 window.addEventListener('resize', resizeCrtFrame, { passive: true });
