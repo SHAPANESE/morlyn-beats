@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Panel de trabajos — Morlyn Beats</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header>
+        <a href="index.html">← VER SITIO</a>
+        <p class="kicker">MORLYN BEATS / CONTROL DE CANALES</p>
+        <h1>TUS TRABAJOS</h1>
+        <p>Elegí una sección y subí sus imágenes o videos. Cada sección tiene su propia galería.</p>
+      </header>
+      <p id="admin-status" role="status" aria-live="polite"></p>
+      <section id="login-panel" class="panel">
+        <h2>Entrar al panel</h2>
+        <form id="login-form">
+          <label>Email<input type="email" name="email" autocomplete="username" required /></label>
+          <label>Contraseña<input type="password" name="password" autocomplete="current-password" required /></label>
+          <button type="submit">ENTRAR</button>
+        </form>
+      </section>
+      <section id="upload-panel" class="panel" hidden>
+        <div class="panel-heading"><h2>Publicar un trabajo</h2><button id="logout" type="button" class="secondary">SALIR</button></div>
+        <form id="upload-form">
+          <fieldset id="upload-fields">
+            <label>Canal<select name="channel" required>
+              <option value="01">01 — Ediciones de video TV</option>
+              <option value="02">02 — Ediciones de video redes</option>
+              <option value="03">03 — Animación 3D</option>
+              <option value="04">04 — Motion graphics</option>
+            </select></label>
+            <label>Título del trabajo<input name="title" maxlength="160" required /></label>
+            <label class="file-picker">Imagen o video<input id="work-file" type="file" name="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required /></label>
+            <p class="hint">JPG, PNG, WebP, GIF, MP4 o WebM. Hasta 50 MB por archivo.</p>
+            <div id="file-preview" class="file-preview"></div>
+            <button type="submit">SUBIR Y PUBLICAR</button>
+          </fieldset>
+          <progress id="upload-progress" max="100" value="0" aria-label="Progreso de la subida" hidden></progress>
+        </form>
+        <p>Cuando termine la subida, el trabajo aparecerá en la galería del canal.</p>
+      </section>
+      <section id="published-panel" class="panel" hidden>
+        <h2>Trabajos publicados</h2>
+        <div id="published-works"></div>
+      </section>
+    </main>
+    <script src="vendor/supabase-2.117.3.js"></script>
+    <script src="vendor/tus-4.3.1.min.js"></script>
+    <script src="backend-config.js"></script>
+    <script src="backend.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>

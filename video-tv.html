@@ -6,14 +6,14 @@
     <script src="vhs-clock.js?v=3"></script>
     <meta name="theme-color" content="#070707" />
     <meta name="description" content="Morlyn Beats — Ediciones de video para TV y redes, animación 3D y motion graphics." />
-    <title>Morlyn Beats — Edición de video y animación</title>
+    <title>Ediciones de video tv — Morlyn Beats</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@800;900&family=DM+Mono:wght@300;400;500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="display.css?v=14" />
   </head>
-  <body data-channel="00">
+  <body class="channel-page" data-channel="01">
     <svg class="filter-definitions" aria-hidden="true">
       <defs>
         <filter id="barrel-distortion" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
@@ -39,28 +39,25 @@
           </div>
 
           <div class="hero-copy">
-            <p class="eyebrow reveal">PRODUCTION SYSTEM / 01</p>
-            <h1 class="hero-title warp-title" aria-label="Morlyn Beats">
-              <span class="line"><span>MORLYN</span></span>
-              <span class="line"><span>BEATS</span></span>
+            <p class="eyebrow reveal">MORLYN BEATS / CANAL 01</p>
+            <h1 class="hero-title warp-title" aria-label="Ediciones de video tv">
+              <span class="line"><span>EDICIONES</span></span>
+              <span class="line"><span>VIDEO TV</span></span>
             </h1>
             <div class="hero-actions reveal">
-              <a class="primary-action magnetic" href="https://instagram.com/morlyn.beats" target="_blank" rel="noreferrer">@MORLYN.BEATS <span>↗</span></a>
+              <a class="primary-action channel-link" href="index.html" data-channel="00">VOLVER AL INICIO <span>←</span></a>
             </div>
           </div>
 
-          <ul class="service-index" aria-label="Cambiar de canal">
-            <li><a class="channel-link" href="video-tv.html" data-channel="01">Ediciones de video tv</a></li>
-            <li><a class="channel-link" href="video-redes.html" data-channel="02">Ediciones de video redes</a></li>
-            <li><a class="channel-link" href="animacion-3d.html" data-channel="03">Animación 3D</a></li>
-            <li><a class="channel-link" href="motion-graphics.html" data-channel="04">Motion graphics</a></li>
-          </ul>
 
-          <!-- Descripción pendiente: agregar el texto dentro de este párrafo. -->
-          <p class="hero-description"></p>
           <p class="jp-mark" aria-hidden="true">モーリン<br />ビーツ</p>
         </div>
         <canvas id="crt-output" aria-hidden="true"></canvas>
+      <section class="portfolio section-works" id="trabajos" aria-labelledby="portfolio-title">
+        <h2 id="portfolio-title">TRABAJOS</h2>
+        <div class="portfolio-grid" aria-live="polite"></div>
+        <p class="portfolio-empty">Todavía no hay trabajos publicados en esta sección.</p>
+      </section>
       </section>
 
       <div class="noise" aria-hidden="true"></div>
@@ -69,6 +66,10 @@
 
 
     <script src="script.js?v=3"></script>
+    <script src="vendor/supabase-2.117.3.js"></script>
+    <script src="backend-config.js"></script>
+    <script src="backend.js"></script>
+    <script src="portfolio.js?v=14"></script>
     <script type="module" src="crt-pipeline.js?v=14"></script>
   </body>
 </html>

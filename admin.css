@@ -1,0 +1,28 @@
+:root { color-scheme: dark; --paper: #efd2aa; --orange: #e95c38; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #090909; color: var(--paper); font: 400 14px/1.7 'DM Mono', monospace; }
+a { color: var(--paper); text-underline-offset: 5px; }
+.admin-shell { width: min(100% - 40px, 850px); margin: 48px auto 80px; }
+header { margin-bottom: 36px; }
+.kicker { margin-top: 32px; color: var(--orange); letter-spacing: .12em; font-size: 11px; }
+h1 { font: 900 clamp(48px, 9vw, 88px)/1 'Barlow Condensed', sans-serif; letter-spacing: .04em; margin: 20px 0; }
+h2 { font-size: 18px; margin: 0 0 24px; }
+.panel { border: 1px solid #efd2aa33; padding: 28px; margin: 24px 0; background: #10100f; }
+.panel-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+form, fieldset { display: grid; gap: 22px; }
+fieldset { min-width: 0; padding: 0; border: 0; margin: 0; }
+label { display: grid; gap: 8px; }
+input, select, button { font: inherit; }
+input, select { width: 100%; min-width: 0; padding: 12px; border: 1px solid #efd2aa55; background: #070707; color: var(--paper); }
+button { padding: 14px 20px; border: 1px solid var(--orange); background: var(--orange); color: #080808; cursor: pointer; font-weight: 500; letter-spacing: .06em; }
+button.secondary { background: transparent; color: var(--paper); padding: 8px 12px; }
+button:disabled { cursor: wait; opacity: .5; }
+:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
+.hint { font-size: 11px; margin: -10px 0 0; }
+.file-preview:empty { display: none; }
+.file-preview img, .file-preview video { width: 100%; max-height: 360px; object-fit: contain; background: #070707; }
+progress { width: 100%; height: 14px; accent-color: var(--orange); margin-top: 20px; }
+#admin-status:not(:empty) { padding: 16px 20px; border-left: 3px solid var(--orange); background: #18130e; }
+.published-work { display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid #efd2aa33; padding: 16px 0; overflow-wrap: anywhere; }
+[hidden] { display: none !important; }
+@media (max-width: 500px) { .panel { padding: 20px; } .admin-shell { margin-top: 28px; } .published-work { flex-direction: column; gap: 6px; } }

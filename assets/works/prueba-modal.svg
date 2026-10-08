@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <radialGradient id="screen">
+      <stop stop-color="#30241c"/>
+      <stop offset="1" stop-color="#0b0a08"/>
+    </radialGradient>
+    <pattern id="lines" width="4" height="6" patternUnits="userSpaceOnUse">
+      <path d="M0 5.5H4" stroke="#000" stroke-opacity=".22"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#screen)"/>
+  <g opacity=".7">
+    <path fill="#efd2aa" d="M0 0h229v330H0z"/>
+    <path fill="#b59a70" d="M229 0h229v330H229z"/>
+    <path fill="#8c6849" d="M458 0h228v330H458z"/>
+    <path fill="#e95c38" d="M686 0h228v330H686z"/>
+    <path fill="#73462f" d="M914 0h229v330H914z"/>
+    <path fill="#403b31" d="M1143 0h228v330H1143z"/>
+    <path fill="#242923" d="M1371 0h229v330H1371z"/>
+  </g>
+  <g font-family="monospace" fill="#efd2aa">
+    <text x="90" y="405" font-size="26" letter-spacing="5" fill="#e95c38">MORLYN BEATS / VISTA DE PRUEBA</text>
+    <text x="82" y="548" font-size="110" font-weight="bold" letter-spacing="-5">PRUEBA DE IMAGEN</text>
+    <text x="90" y="617" font-size="28" letter-spacing="3">PORTFOLIO AUDIOVISUAL</text>
+    <path d="M90 683H1510" stroke="#e95c38" stroke-opacity=".65"/>
+    <text x="90" y="787" font-size="26" letter-spacing="4">PLAY ▶</text>
+    <text x="1510" y="787" text-anchor="end" font-size="26" letter-spacing="4">00:00:01</text>
+  </g>
+  <rect width="1600" height="900" fill="url(#lines)"/>
+</svg>

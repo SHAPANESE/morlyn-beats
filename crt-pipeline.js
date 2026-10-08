@@ -5,10 +5,7 @@
  */
 
 const output = document.querySelector('#crt-output');
-const mpcCanvas = document.querySelector('#three-sampler');
-const stage = document.querySelector('.three-stage');
-
-if (output && mpcCanvas && stage) {
+if (output) {
   const gl = output.getContext('webgl', {
     alpha: false,
     antialias: false,
@@ -33,9 +30,7 @@ if (output && mpcCanvas && stage) {
       precision mediump float;
 
       uniform sampler2D u_texture;
-      uniform sampler2D u_mpcTexture;
       uniform vec2 u_resolution;
-      uniform vec4 u_mpcRect;
       uniform float u_time;
       varying vec2 v_uv;
 
@@ -57,17 +52,7 @@ if (output && mpcCanvas && stage) {
       }
 
       vec3 sampleSource(vec2 uv) {
-        vec4 base = texture2D(u_texture, uv);
-        bool insideMpc = uv.x >= u_mpcRect.x && uv.x <= u_mpcRect.x + u_mpcRect.z
-          && uv.y >= u_mpcRect.y && uv.y <= u_mpcRect.y + u_mpcRect.w;
-        if (insideMpc) {
-          vec2 localUV = (uv - u_mpcRect.xy) / u_mpcRect.zw;
-          vec4 mpc = texture2D(u_mpcTexture, localUV);
-          vec3 composite = mix(base.rgb, mpc.rgb, mpc.a);
-          float interfaceMask = smoothstep(0.06, 0.16, max(max(base.r, base.g), base.b));
-          return mix(composite, base.rgb, interfaceMask);
-        }
-        return base.rgb;
+        return texture2D(u_texture, uv).rgb;
       }
 
       void main() {
@@ -141,9 +126,7 @@ if (output && mpcCanvas && stage) {
       const positionLocation = gl.getAttribLocation(program, 'a_position');
       const uvLocation = gl.getAttribLocation(program, 'a_uv');
       const textureLocation = gl.getUniformLocation(program, 'u_texture');
-      const mpcTextureLocation = gl.getUniformLocation(program, 'u_mpcTexture');
       const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
-      const mpcRectLocation = gl.getUniformLocation(program, 'u_mpcRect');
       const timeLocation = gl.getUniformLocation(program, 'u_time');
 
       const quad = gl.createBuffer();
@@ -162,23 +145,6 @@ if (output && mpcCanvas && stage) {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-      const mpcTexture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, mpcTexture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        1,
-        1,
-        0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        new Uint8Array([0, 0, 0, 0]),
-      );
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
       const source = document.createElement('canvas');
@@ -190,17 +156,10 @@ if (output && mpcCanvas && stage) {
       let layout = null;
       let textureWidth = 0;
       let textureHeight = 0;
-      let mpcDirty = true;
-      let mpcFrame = null;
       const startTime = performance.now();
       const flickerLeadIn = 3.6;
       const flickerPeriod = 4.8;
       const flickerDuration = 0.62;
-      let lastFlickerCycle = -1;
-      let flickerAudioContext = null;
-      let flickerAudioBuffer = null;
-      let flickerAudioOffset = 0;
-      let flickerAudioPromise = null;
 
       const getFlickerState = (elapsed) => {
         if (elapsed < flickerLeadIn) return { active: false, cycle: -1, phase: 1, alpha: 1 };
@@ -221,75 +180,87 @@ if (output && mpcCanvas && stage) {
         return { active: true, cycle, phase, alpha };
       };
 
-      const prepareFlickerAudio = () => {
-        if (flickerAudioPromise) return flickerAudioPromise;
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) return Promise.resolve(null);
-        flickerAudioContext = new AudioContextClass();
-        flickerAudioPromise = fetch('./assets/flicker-open-sign.m4a')
-          .then((response) => {
-            if (!response.ok) throw new Error(`Flicker audio failed: ${response.status}`);
-            return response.arrayBuffer();
-          })
-          .then((data) => flickerAudioContext.decodeAudioData(data))
-          .then((buffer) => {
-            flickerAudioBuffer = buffer;
-            const channel = buffer.getChannelData(0);
-            const blockSize = Math.max(1, Math.floor(buffer.sampleRate * 0.018));
-            let maximum = 0;
-            const levels = [];
-            for (let index = 0; index < channel.length; index += blockSize) {
-              let total = 0;
-              const end = Math.min(channel.length, index + blockSize);
-              for (let sample = index; sample < end; sample += 1) total += Math.abs(channel[sample]);
-              const level = total / Math.max(1, end - index);
-              levels.push(level);
-              maximum = Math.max(maximum, level);
-            }
-            const onsetBlock = levels.findIndex((level) => level > maximum * 0.2);
-            flickerAudioOffset = Math.max(0, onsetBlock * blockSize / buffer.sampleRate - 0.025);
-            return buffer;
-          })
-          .catch((error) => {
-            console.warn('Could not prepare the flicker sound.', error);
-            return null;
-          });
-        return flickerAudioPromise;
+      const rectOf = (target) => {
+        const node = typeof target === 'string' ? document.querySelector(target) : target;
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
+        const heroTop = document.querySelector('.hero').getBoundingClientRect().top;
+        return { left: rect.left, right: rect.right, top: rect.top - heroTop, bottom: rect.bottom - heroTop, width: rect.width, height: rect.height };
       };
 
-      const unlockFlickerAudio = async () => {
-        await prepareFlickerAudio();
-        if (flickerAudioContext?.state === 'suspended') await flickerAudioContext.resume();
+      let actionHit;
+      let portfolioNeedsAlignment = true;
+      const screenPoint = (x, y) => {
+        const cx = x / viewportWidth * 2 - 1;
+        const cy = y / viewportHeight * 2 - 1;
+        const radius = cx * cx + cy * cy;
+        let scale = 1;
+        for (let step = 0; step < 6; step += 1) {
+          scale -= (scale + .115 * radius * scale ** 3 - 1) / (1 + .345 * radius * scale ** 2);
+        }
+        return { x: (cx * scale + 1) * viewportWidth / 2, y: (cy * scale + 1) * viewportHeight / 2 };
       };
-
-      const playFlickerAudio = () => {
-        if (!flickerAudioBuffer || flickerAudioContext?.state !== 'running') return;
-        const now = flickerAudioContext.currentTime;
-        const availableDuration = Math.max(0.05, flickerAudioBuffer.duration - flickerAudioOffset);
-        const duration = Math.min(flickerDuration, availableDuration);
-        const sourceNode = flickerAudioContext.createBufferSource();
-        const gainNode = flickerAudioContext.createGain();
-        sourceNode.buffer = flickerAudioBuffer;
-        gainNode.gain.setValueAtTime(0.0001, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.24, now + 0.012);
-        gainNode.gain.setValueAtTime(0.24, now + Math.max(0.02, duration - 0.05));
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-        sourceNode.connect(gainNode).connect(flickerAudioContext.destination);
-        sourceNode.start(now, flickerAudioOffset, duration);
-        sourceNode.stop(now + duration + 0.015);
+      const alignPortfolioCards = () => {
+        const cards = [...document.querySelectorAll('.portfolio-card')];
+        cards.forEach(card => { card.style.transform = 'none'; });
+        const rects = cards.map(rectOf);
+        const mediaRects = cards.map(card => rectOf(card.querySelector('.portfolio-media-window')));
+        const captionRects = cards.map(card => rectOf(card.querySelector('figcaption')));
+        cards.forEach((card, index) => {
+          const rect = rects[index];
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const center = screenPoint(x, y);
+          const dx = screenPoint(x + 1, y);
+          const dy = screenPoint(x, y + 1);
+          const a = dx.x - center.x;
+          const b = dx.y - center.y;
+          const c = dy.x - center.x;
+          const d = dy.y - center.y;
+          card.style.transform = `matrix(${a}, ${b}, ${c}, ${d}, ${center.x - x}, ${center.y - y})`;
+          card.crtLayout = { rect, media: mediaRects[index], caption: captionRects[index] };
+        });
+        portfolioNeedsAlignment = false;
       };
-
-      prepareFlickerAudio();
-      window.addEventListener('pointerdown', unlockFlickerAudio, { once: true, passive: true });
-      window.addEventListener('keydown', unlockFlickerAudio, { once: true });
-      window.addEventListener('morlyn-mpc-frame', (event) => {
-        const frame = event.detail;
-        if (!frame?.pixels || !frame.width || !frame.height) return;
-        mpcFrame = frame;
-        mpcDirty = true;
-      });
-
-      const rectOf = (selector) => document.querySelector(selector)?.getBoundingClientRect() || null;
+      const updateActionHit = () => {
+        if (!actionHit || !layout?.instagram.node) return;
+        const rect = rectOf(layout.instagram.node);
+        const points = [];
+        // Sample the entire edge: a CRT turns straight source edges into arcs.
+        for (let step = 0; step <= 12; step += 1) {
+          points.push(screenPoint(rect.left + rect.width * step / 12, rect.top));
+        }
+        for (let step = 0; step <= 12; step += 1) {
+          points.push(screenPoint(rect.right - rect.width * step / 12, rect.bottom));
+        }
+        const left = Math.min(...points.map(point => point.x));
+        const top = Math.min(...points.map(point => point.y));
+        actionHit.style.left = `${left}px`;
+        actionHit.style.top = `${top}px`;
+        actionHit.style.width = `${Math.max(...points.map(point => point.x)) - left}px`;
+        actionHit.style.height = `${Math.max(...points.map(point => point.y)) - top}px`;
+        actionHit.style.clipPath = `polygon(${points.map(point => `${point.x - left}px ${point.y - top}px`).join(',')})`;
+      };
+      const prepareActionHit = () => {
+        const original = layout.instagram.node;
+        if (!original) return;
+        actionHit = document.createElement('a');
+        actionHit.className = 'crt-action-hit';
+        actionHit.href = original.href;
+        if (original.target) actionHit.target = original.target;
+        if (original.rel) actionHit.rel = original.rel;
+        actionHit.setAttribute('aria-label', original.textContent.trim());
+        actionHit.addEventListener('click', event => {
+          if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          original.click();
+        });
+        original.tabIndex = -1;
+        original.setAttribute('aria-hidden', 'true');
+        original.style.pointerEvents = 'none';
+        document.querySelector('.hero').appendChild(actionHit);
+        updateActionHit();
+      };
 
       const readLayout = () => {
         layout = {
@@ -301,7 +272,8 @@ if (output && mpcCanvas && stage) {
           play: rectOf('.vhs-play'),
           speed: rectOf('.vhs-speed'),
           timecode: rectOf('.vhs-timecode'),
-          stage: stage.getBoundingClientRect(),
+          portfolioLink: { node: document.querySelector('.portfolio-link'), rect: rectOf('.portfolio-link') },
+          description: { node: document.querySelector('.hero-description'), rect: rectOf('.hero-description') },
         };
       };
 
@@ -317,6 +289,7 @@ if (output && mpcCanvas && stage) {
         textureHeight = 0;
         gl.viewport(0, 0, output.width, output.height);
         readLayout();
+        portfolioNeedsAlignment = true;
       };
 
       const cssFont = (node, fallback = 'DM Mono') => {
@@ -363,28 +336,28 @@ if (output && mpcCanvas && stage) {
         if (!title) return;
         const { size, font } = cssFont(title, 'Barlow Condensed');
         sourceContext.font = font;
-        sourceContext.textBaseline = 'bottom';
+        sourceContext.textBaseline = 'top';
         sourceContext.fillStyle = '#ffe5bd';
         sourceContext.shadowColor = 'rgba(233, 92, 56, .72)';
         sourceContext.shadowBlur = 3;
         sourceContext.shadowOffsetX = 4;
         sourceContext.shadowOffsetY = 5;
 
-        const visibleCharacters = Math.max(0, Math.floor((elapsed - 0.22) / 0.075));
+        const visibleCharacters = document.documentElement.classList.contains('channel-arrival')
+          ? Infinity : Math.max(0, Math.floor((elapsed - 0.22) / 0.075));
         let characterOffset = 0;
         [...layout.title].forEach((line) => {
-          const rect = line.getBoundingClientRect();
+          const rect = rectOf(line);
           const fullText = line.textContent.trim();
           const localVisible = Math.max(0, Math.min(fullText.length, visibleCharacters - characterOffset));
           const visibleText = fullText.slice(0, localVisible);
-          const tracking = size * 0.025;
+          const tracking = size * 0.055;
           const width = Math.max(trackedWidth(sourceContext, fullText, tracking), 1);
           const scaleX = rect.width / width;
-          const scaleY = Math.max(1, Math.min(1.42, rect.height / Math.max(size * 0.86, 1)));
 
           sourceContext.save();
-          sourceContext.translate(rect.left, rect.bottom);
-          sourceContext.scale(scaleX, scaleY);
+          sourceContext.translate(rect.left, rect.top);
+          sourceContext.scale(scaleX, 1);
           drawFlickeringTitle(sourceContext, visibleText, 0, 0, tracking, elapsed, characterOffset);
           sourceContext.restore();
           characterOffset += fullText.length + 1;
@@ -397,7 +370,7 @@ if (output && mpcCanvas && stage) {
       };
 
       const drawLabel = (node, rect, text = node?.textContent?.trim(), options = {}) => {
-        if (!node || !rect || !text) return;
+        if (!node || node.hidden || !rect || !rect.width || !rect.height || !text) return;
         const { style, size, font } = cssFont(node);
         sourceContext.font = font;
         sourceContext.textBaseline = 'top';
@@ -412,28 +385,211 @@ if (output && mpcCanvas && stage) {
         sourceContext.shadowBlur = 0;
       };
 
+      const drawWorkCards = () => {
+        const grid = document.querySelector('.portfolio-grid');
+        if (!grid) return;
+        const gridRect = rectOf(grid);
+        sourceContext.save();
+        sourceContext.beginPath();
+        sourceContext.rect(gridRect.left, gridRect.top, gridRect.width, gridRect.height);
+        sourceContext.clip();
+        [...grid.querySelectorAll('.portfolio-card')].forEach((card, index) => {
+          const bounds = card.crtLayout;
+          if (!bounds?.media || bounds.rect.bottom < gridRect.top || bounds.rect.top > gridRect.bottom) return;
+          const rect = bounds.media;
+          const media = card.querySelector('img, video');
+          const active = !!card.querySelector('.work-open') && (card.matches(':hover') || card.contains(document.activeElement));
+          const video = media?.tagName === 'VIDEO' || !!card.querySelector('.placeholder-icon-video');
+          sourceContext.save();
+          sourceContext.beginPath();
+          sourceContext.roundRect(rect.left, rect.top, rect.width, rect.height, 8);
+          sourceContext.clip();
+          sourceContext.fillStyle = 'rgba(239, 210, 170, .025)';
+          sourceContext.fillRect(rect.left, rect.top, rect.width, rect.height);
+          const ready = media?.tagName === 'IMG' ? media.complete && media.naturalWidth : media?.readyState >= 2;
+          if (ready) {
+            const width = media.naturalWidth || media.videoWidth;
+            const height = media.naturalHeight || media.videoHeight;
+            const scale = Math.min(rect.width / width, rect.height / height);
+            sourceContext.drawImage(media, rect.left + (rect.width - width * scale) / 2, rect.top + (rect.height - height * scale) / 2, width * scale, height * scale);
+          } else {
+            const padding = Math.max(12, rect.width * .065);
+            const backdrop = sourceContext.createLinearGradient(rect.left, rect.top, rect.right, rect.bottom);
+            backdrop.addColorStop(0, 'rgba(239, 210, 170, .055)');
+            backdrop.addColorStop(.6, 'rgba(239, 210, 170, .015)');
+            backdrop.addColorStop(1, 'rgba(233, 92, 56, .07)');
+            sourceContext.fillStyle = backdrop;
+            sourceContext.fillRect(rect.left, rect.top, rect.width, rect.height);
+            sourceContext.textBaseline = 'alphabetic';
+            sourceContext.textAlign = 'right';
+            sourceContext.font = `italic 900 ${rect.height * .98}px "Barlow Condensed", sans-serif`;
+            sourceContext.strokeStyle = 'rgba(233, 92, 56, .22)';
+            sourceContext.lineWidth = 1;
+            sourceContext.strokeText(String(index + 1).padStart(2, '0'), rect.right + 4, rect.bottom + rect.height * .08);
+            sourceContext.textAlign = 'left';
+            sourceContext.fillStyle = '#e95c38';
+            sourceContext.fillRect(rect.left + padding, rect.top + padding, 24, 2);
+            sourceContext.font = `500 ${Math.max(7, Math.min(9, rect.width * .03))}px "DM Mono", monospace`;
+            sourceContext.fillStyle = 'rgba(239, 210, 170, .55)';
+            sourceContext.fillText('MORLYN / ARCHIVO', rect.left + padding + 32, rect.top + padding + 4);
+            sourceContext.font = `italic 900 ${Math.min(rect.height * .38, rect.width * .18)}px "Barlow Condensed", sans-serif`;
+            const label = video ? 'VIDEO' : 'IMAGEN';
+            const x = rect.left + padding;
+            const y = rect.top + rect.height * .65;
+            sourceContext.fillStyle = 'rgba(233, 92, 56, .65)';
+            sourceContext.fillText(label, x + 2, y + 2);
+            sourceContext.fillStyle = '#efd2aa';
+            sourceContext.shadowColor = 'rgba(239, 210, 170, .25)';
+            sourceContext.shadowBlur = 3;
+            sourceContext.fillText(label, x, y);
+            sourceContext.shadowBlur = 0;
+            sourceContext.font = `400 ${Math.max(7, Math.min(9, rect.width * .03))}px "DM Mono", monospace`;
+            sourceContext.fillStyle = 'rgba(239, 210, 170, .45)';
+            sourceContext.fillText('PROXIMAMENTE', x, rect.bottom - padding);
+          }
+          if ((media && video) || active) {
+            sourceContext.fillStyle = 'rgba(0, 0, 0, .55)';
+            sourceContext.fillRect(rect.left, rect.bottom - 30, rect.width, 30);
+            sourceContext.font = '500 10px "DM Mono", monospace';
+            sourceContext.textBaseline = 'middle';
+            sourceContext.fillStyle = active ? '#e95c38' : '#efd2aa';
+            sourceContext.fillText(!media ? 'VER PRUEBA \u2197' : video ? 'REPRODUCIR \u25b6' : 'ABRIR IMAGEN \u2197', rect.left + 12, rect.bottom - 15);
+          }
+          sourceContext.restore();
+          const caption = card.querySelector('figcaption');
+          if (caption && bounds.caption) {
+            const paddingTop = parseFloat(getComputedStyle(caption).paddingTop) || 0;
+            drawLabel(caption, { ...bounds.caption, top: bounds.caption.top + paddingTop }, undefined, { tracking: .08, blur: 3, color: active ? '#e95c38' : undefined });
+          }
+        });
+        sourceContext.restore();
+      };
+
+      const drawPortfolio = () => {
+        const portfolio = document.querySelector('.section-works');
+        if (!portfolio || portfolio.hidden) return;
+        drawWorkCards();
+        const kicker = portfolio.querySelector('.portfolio-kicker');
+        const heading = portfolio.querySelector('h2');
+        drawLabel(kicker, rectOf(kicker), undefined, { color: '#e95c38', tracking: 0.16 });
+        drawLabel(heading, rectOf(heading), undefined, { tracking: 0.12 });
+
+        const empty = portfolio.querySelector('.portfolio-empty');
+        if (!empty || empty.hidden) return;
+        const rect = rectOf(empty);
+        const { style, size, font } = cssFont(empty);
+        const paddingX = parseFloat(style.paddingLeft) || 0;
+        const paddingY = parseFloat(style.paddingTop) || 0;
+        const lineHeight = parseFloat(style.lineHeight) || size * 1.8;
+        sourceContext.save();
+        sourceContext.strokeStyle = 'rgba(233, 92, 56, .45)';
+        sourceContext.lineWidth = 1;
+        sourceContext.shadowColor = 'rgba(233, 92, 56, .35)';
+        sourceContext.shadowBlur = 4;
+        sourceContext.strokeRect(rect.left, rect.top, rect.width, rect.height);
+        sourceContext.font = font;
+        sourceContext.textBaseline = 'top';
+        sourceContext.fillStyle = '#efd2aa';
+        sourceContext.shadowColor = 'rgba(255, 225, 185, .4)';
+        let line = '';
+        let y = rect.top + paddingY;
+        empty.textContent.trim().split(/\s+/).forEach((word) => {
+          const next = line ? line + ' ' + word : word;
+          if (line && sourceContext.measureText(next).width > rect.width - paddingX * 2) {
+            sourceContext.fillText(line, rect.left + paddingX, y);
+            y += lineHeight;
+            line = word;
+          } else line = next;
+        });
+        if (line) sourceContext.fillText(line, rect.left + paddingX, y);
+        sourceContext.restore();
+      };
+
+      const drawWorkPlayer = player => {
+        const area = rectOf(player.querySelector('.work-player-media'));
+        const media = player.querySelector('img, video');
+        const ready = media.tagName === 'IMG' ? media.complete && media.naturalWidth : media.readyState >= 2;
+        if (ready) {
+          const width = media.naturalWidth || media.videoWidth;
+          const height = media.naturalHeight || media.videoHeight;
+          const scale = Math.min(area.width / width, area.height / height);
+          sourceContext.save();
+          sourceContext.beginPath();
+          sourceContext.rect(area.left, area.top, area.width, area.height);
+          sourceContext.clip();
+          sourceContext.drawImage(media, area.left + (area.width - width * scale) / 2, area.top + (area.height - height * scale) / 2, width * scale, height * scale);
+          sourceContext.restore();
+        }
+        for (const selector of ['.work-player-kicker', '.work-player-title', '.work-player-status', '.work-player-time']) {
+          const node = player.querySelector(selector);
+          if (!node || node.hidden) continue;
+          const rect = rectOf(node);
+          sourceContext.save();
+          sourceContext.beginPath();
+          sourceContext.rect(rect.left, rect.top, rect.width, rect.height);
+          sourceContext.clip();
+          drawLabel(node, rect, undefined, { tracking: selector === '.work-player-title' ? .02 : selector === '.work-player-time' ? 0 : .08 });
+          sourceContext.restore();
+        }
+        const controls = [...player.querySelectorAll('button, input')];
+        controls.forEach(node => { node.style.transform = 'none'; });
+        const rects = controls.map(rectOf);
+        controls.forEach((node, index) => {
+          const rect = rects[index];
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const center = screenPoint(x, y);
+          const dx = screenPoint(x + 1, y);
+          const dy = screenPoint(x, y + 1);
+          node.style.transform = `matrix(${dx.x - center.x}, ${dx.y - center.y}, ${dy.x - center.x}, ${dy.y - center.y}, ${center.x - x}, ${center.y - y})`;
+          const active = node.matches(':hover, :focus-visible');
+          if (node.tagName === 'INPUT') {
+            const progress = Number(node.value) / 100;
+            sourceContext.fillStyle = 'rgba(239, 210, 170, .22)';
+            sourceContext.fillRect(rect.left, y - 1, rect.width, 2);
+            sourceContext.fillStyle = active ? '#ff6842' : '#efd2aa';
+            sourceContext.fillRect(rect.left, y - 1, rect.width * progress, 2);
+            sourceContext.fillRect(rect.left + rect.width * progress - 2, y - 4, 4, 8);
+          } else {
+            const style = getComputedStyle(node);
+            const textRect = { ...rect, left: rect.left + (parseFloat(style.paddingLeft) || 0), top: rect.top + (parseFloat(style.paddingTop) || 0) };
+            drawLabel(node, textRect, undefined, { color: active ? '#ff6842' : undefined, tracking: .08 });
+            if (active || node.classList.contains('work-player-back')) {
+              sourceContext.fillStyle = active ? '#ff6842' : 'rgba(239, 210, 170, .4)';
+              sourceContext.fillRect(rect.left, rect.bottom - 2, rect.width, 1);
+            }
+          }
+        });
+      };
+
       const drawInterface = (elapsed) => {
+        const player = document.querySelector('.work-player');
+        if (player) drawWorkPlayer(player);
+        else {
         const eyebrow = layout.eyebrow;
-        drawLabel(eyebrow.node, eyebrow.rect, undefined, {
+        drawLabel(eyebrow.node, rectOf(eyebrow.node), undefined, {
           color: '#e95c38',
           glow: 'rgba(233, 92, 56, .55)',
           tracking: 0.14,
         });
 
         drawTitle(elapsed);
+        drawPortfolio();
 
         layout.services.forEach((service, index) => {
-          const rect = service.getBoundingClientRect();
+          const rect = rectOf(service);
           const { size, font } = cssFont(service);
           sourceContext.font = font;
           sourceContext.textBaseline = 'top';
           sourceContext.fillStyle = '#ff6842';
           sourceContext.fillText(String(index + 1).padStart(2, '0'), rect.left, rect.top);
-          sourceContext.fillStyle = '#ffe4bd';
+          const link = service.querySelector('a');
+          const selected = link?.matches(':hover, :focus-visible, [aria-current="page"]');
+          sourceContext.fillStyle = selected ? '#ff6842' : '#ffe4bd';
           sourceContext.shadowColor = 'rgba(255, 228, 189, .55)';
-          sourceContext.shadowBlur = 7;
+          sourceContext.shadowBlur = 3;
           const textX = rect.left + size * 3.2;
-          drawTrackedText(sourceContext, service.textContent.trim(), textX, rect.top, size * 0.12);
+          drawTrackedText(sourceContext, service.textContent.trim().toUpperCase(), textX, rect.top, size * 0.12);
           sourceContext.shadowColor = 'transparent';
           sourceContext.shadowBlur = 0;
           sourceContext.strokeStyle = 'rgba(255, 104, 66, .62)';
@@ -444,10 +600,39 @@ if (output && mpcCanvas && stage) {
           sourceContext.stroke();
         });
 
-        const instagram = layout.instagram;
-        drawLabel(instagram.node, instagram.rect, instagram.node?.textContent?.trim(), { tracking: 0.1 });
+        drawLabel(layout.portfolioLink.node, rectOf(layout.portfolioLink.node));
+
+        const description = layout.description;
+        if (description.node && description.rect && description.node.textContent.trim()) {
+          const { style, size, font } = cssFont(description.node);
+          sourceContext.font = font;
+          sourceContext.textBaseline = 'top';
+          sourceContext.fillStyle = style.color;
+          const lineHeight = parseFloat(style.lineHeight) || size * 1.7;
+          let line = '';
+          let y = description.rect.top;
+          description.node.textContent.trim().split(/\s+/).forEach((word) => {
+            const next = line ? line + ' ' + word : word;
+            if (line && sourceContext.measureText(next).width > description.rect.width) {
+              sourceContext.fillText(line, description.rect.left, y);
+              y += lineHeight;
+              line = word;
+            } else {
+              line = next;
+            }
+          });
+          if (line) sourceContext.fillText(line, description.rect.left, y);
+        }
+
+        const instagram = { ...layout.instagram, rect: rectOf(layout.instagram.node) };
+        const actionActive = actionHit?.matches(':hover, :focus-visible');
+        drawLabel(instagram.node, instagram.rect, instagram.node?.textContent?.trim(), {
+          tracking: 0.1,
+          color: actionActive ? '#ff6842' : '#efd2aa',
+          glow: actionActive ? 'rgba(233, 92, 56, .65)' : 'rgba(255, 225, 185, .32)',
+        });
         if (instagram.rect) {
-          sourceContext.strokeStyle = '#efd2aa';
+          sourceContext.strokeStyle = actionActive ? '#ff6842' : '#efd2aa';
           sourceContext.globalAlpha = 0.72;
           sourceContext.lineWidth = 1;
           sourceContext.beginPath();
@@ -457,8 +642,14 @@ if (output && mpcCanvas && stage) {
           sourceContext.globalAlpha = 1;
         }
 
+        }
+
         const jp = layout.japanese;
-        if (jp.node && jp.rect) {
+        const channelIdent = document.querySelector('.channel-ident.is-visible');
+        if (channelIdent) {
+          drawLabel(channelIdent, rectOf(channelIdent), undefined, { tracking: -0.06, color: '#efd2aa' });
+        }
+        if (jp.node && jp.rect && !channelIdent) {
           const { size, font } = cssFont(jp.node, 'sans-serif');
           sourceContext.font = font;
           sourceContext.textAlign = 'right';
@@ -482,7 +673,7 @@ if (output && mpcCanvas && stage) {
         sourceContext.shadowBlur = 4;
         if (layout.play) sourceContext.fillText('PLAY ▶', layout.play.left, layout.play.top);
 
-        const counterSeconds = Math.floor(elapsed);
+        const counterSeconds = window.morlynVhsSeconds();
         const counter = [
           Math.floor(counterSeconds / 3600),
           Math.floor((counterSeconds % 3600) / 60),
@@ -542,38 +733,6 @@ if (output && mpcCanvas && stage) {
         }
 
         gl.uniform1i(textureLocation, 0);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, mpcTexture);
-        if (mpcDirty && mpcFrame) {
-          try {
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-            gl.texImage2D(
-              gl.TEXTURE_2D,
-              0,
-              gl.RGBA,
-              mpcFrame.width,
-              mpcFrame.height,
-              0,
-              gl.RGBA,
-              gl.UNSIGNED_BYTE,
-              mpcFrame.pixels,
-            );
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-          } catch (error) {
-            console.warn('Could not upload the MPC pixel frame to the CRT texture.', error);
-          }
-          mpcDirty = false;
-        }
-        gl.uniform1i(mpcTextureLocation, 1);
-
-        const stageRect = stage.getBoundingClientRect();
-        gl.uniform4f(
-          mpcRectLocation,
-          stageRect.left / viewportWidth,
-          1 - (stageRect.bottom / viewportHeight),
-          stageRect.width / viewportWidth,
-          stageRect.height / viewportHeight,
-        );
         gl.uniform2f(resolutionLocation, output.width, output.height);
         gl.uniform1f(timeLocation, elapsed);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -586,13 +745,10 @@ if (output && mpcCanvas && stage) {
         if (now - previousFrame >= frameInterval) {
           previousFrame = now;
           const elapsed = (now - startTime) / 1000;
-          const flicker = getFlickerState(elapsed);
-          if (flicker.active && flicker.cycle !== lastFlickerCycle) {
-            lastFlickerCycle = flicker.cycle;
-            playFlickerAudio();
-          }
+          if (portfolioNeedsAlignment) alignPortfolioCards();
           drawSource(elapsed);
           drawShader(elapsed);
+          updateActionHit();
         }
         requestAnimationFrame(frame);
       };
@@ -600,10 +756,23 @@ if (output && mpcCanvas && stage) {
       const start = async () => {
         if (document.fonts?.ready) await document.fonts.ready;
         resize();
-        window.morlynMpcRenderer?.renderNow();
         drawSource(0);
         drawShader(0);
         document.documentElement.classList.add('canvas-crt-ready');
+        prepareActionHit();
+        alignPortfolioCards();
+        window.addEventListener('morlyn-portfolio-ready', () => { portfolioNeedsAlignment = true; });
+        document.querySelector('.portfolio-grid')?.addEventListener('scroll', () => { portfolioNeedsAlignment = true; }, { passive: true });
+        window.morlynCaptureCrt = () => {
+          const elapsed = (performance.now() - startTime) / 1000;
+          drawSource(elapsed);
+          drawShader(elapsed);
+          const snapshot = document.createElement('canvas');
+          snapshot.width = 640;
+          snapshot.height = Math.max(1, Math.round(640 * output.height / output.width));
+          snapshot.getContext('2d').drawImage(output, 0, 0, snapshot.width, snapshot.height);
+          return snapshot.toDataURL('image/jpeg', .7);
+        };
         window.addEventListener('resize', resize, { passive: true });
         requestAnimationFrame(frame);
       };
