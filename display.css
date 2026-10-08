@@ -1124,3 +1124,8 @@ body:not(.channel-page) .service-index { top: 44%; font-size: clamp(14px, 1.25vw
 @media (hover: none) { .cursor { display: none; } }
 .work-open, .crt-action-hit { touch-action: manipulation; }
 a, button, input { -webkit-tap-highlight-color: transparent; }
+
+/* Compact YouTube controls, with full touch targets on one row. */
+.work-player-controls.is-minimal { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
+.work-player-controls.is-minimal button { width: 44px; min-height: 44px; padding: 0; font-size: 18px; text-align: center; }
+.work-player-controls.is-minimal .work-player-seek { width: 0; min-width: 40px; height: 44px; }

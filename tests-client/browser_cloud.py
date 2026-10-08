@@ -115,7 +115,9 @@ def main():
                 gallery.get_by_role('button',name='Silenciar video',exact=True).click(force=True)
                 expect(gallery.get_by_role('button',name='Activar sonido',exact=True)).to_be_enabled()
                 gallery.locator('.work-player-seek').evaluate("node=>{node.value='50';node.dispatchEvent(new Event('input',{bubbles:true}))}")
-                expect(gallery.locator('.work-player-time')).to_have_text('01:00 / 02:00')
+                assert gallery.evaluate('window.testYTPlayer.current') == 60
+                expect(gallery.locator('.work-player-time')).to_have_count(0)
+                expect(gallery.locator('.work-player-controls button')).to_have_count(3)
                 assert gallery.evaluate("getComputedStyle(document.querySelector('.work-player-media'),'::after').pointerEvents") == 'none'
                 gallery.screenshot(path=str(ROOT/'tests-client/youtube-player.png'))
                 box = gallery.locator('.work-player iframe').bounding_box(); assert box['height'] >= 200 and box['width'] >= 200
@@ -126,7 +128,12 @@ def main():
                 gallery.locator('.work-open').click(force=True)
                 mobile_box = gallery.locator('.work-player iframe').bounding_box()
                 assert mobile_box['width'] >= 200 and mobile_box['height'] >= 200
+                controls_box = gallery.locator('.work-player-controls').bounding_box()
+                assert controls_box['height'] <= 50
+                assert controls_box['x'] >= 0 and controls_box['x'] + controls_box['width'] <= 390
                 assert mobile_box['x'] >= 0 and mobile_box['x'] + mobile_box['width'] <= 390
+                expect(gallery.get_by_role('button',name='Reproducir video',exact=True)).to_be_enabled()
+                gallery.wait_for_timeout(500)
                 gallery.screenshot(path=str(ROOT/'tests-client/youtube-player-mobile.png'))
                 gallery.locator('.work-player-back').click(force=True)
                 gallery.set_viewport_size({'width':1440,'height':1000})

@@ -22,36 +22,35 @@ function loadAPI() {
 
 export function mountYouTubeControls({iframe, container, fullscreenTarget, status, fallbackUrl}) {
   const controls = document.createElement('div');
-  controls.className = 'work-player-controls';
+  controls.className = 'work-player-controls is-minimal';
   const button = (text, label) => {
     const node = document.createElement('button'); node.type = 'button';
-    node.textContent = text; node.setAttribute('aria-label', label); return node;
+    node.textContent = text; node.setAttribute('aria-label', label); node.title = label; return node;
   };
-  const play = button('PLAY ▶', 'Reproducir video');
-  const mute = button('SONIDO ON', 'Silenciar video');
-  const expand = button('AMPLIAR ↗', 'Pantalla completa');
+  const play = button('▶', 'Reproducir video');
+  const mute = button('♪', 'Silenciar video');
+  const expand = button('↗', 'Pantalla completa');
   const seek = document.createElement('input');
   seek.type = 'range'; seek.className = 'work-player-seek';
   seek.min = '0'; seek.max = '100'; seek.step = '.1'; seek.value = '0';
   seek.setAttribute('aria-label', 'Posición del video');
-  const time = document.createElement('span'); time.className = 'work-player-time'; time.textContent = '00:00 / 00:00';
   play.disabled = mute.disabled = seek.disabled = true;
-  controls.append(play, seek, time, mute, expand); container.append(controls);
+  controls.append(play, seek, mute, expand); container.append(controls);
   let player, polling, closed = false, ready = false;
   let readyTimeout;
-  const format = value => Math.floor(value / 60).toString().padStart(2, '0') + ':' + Math.floor(value % 60).toString().padStart(2, '0');
   const sync = () => {
     if (!ready || closed) return;
     const state = player.getPlayerState(), playing = state === 1 || state === 3;
-    play.textContent = playing ? 'PAUSA ❚❚' : 'PLAY ▶';
-    play.setAttribute('aria-label', playing ? 'Pausar video' : 'Reproducir video');
+    play.textContent = playing ? '❚❚' : '▶';
+    play.title = playing ? 'Pausar video' : 'Reproducir video';
+    play.setAttribute('aria-label', play.title);
     const duration = Number(player.getDuration()) || 0, current = Number(player.getCurrentTime()) || 0;
     seek.disabled = !(Number.isFinite(duration) && duration > 0);
     if (!seek.matches(':active')) seek.value = duration > 0 ? String(current / duration * 100) : '0';
-    time.textContent = format(current) + ' / ' + format(duration);
     const muted = player.isMuted();
-    mute.textContent = muted ? 'SONIDO OFF' : 'SONIDO ON';
-    mute.setAttribute('aria-label', muted ? 'Activar sonido' : 'Silenciar video');
+    mute.textContent = muted ? '×' : '♪';
+    mute.title = muted ? 'Activar sonido' : 'Silenciar video';
+    mute.setAttribute('aria-label', mute.title);
   };
   const fallback = () => {
     if (closed || ready) return;
