@@ -1,5 +1,5 @@
 /*
- * Single-pass CRT compositor for Morlyn Beats.
+ * Single-pass CRT compositor for Ramiro Lynn.
  * The curvature, rounded-screen SDF and lightweight bloom approach are adapted
  * from RetroZone's MIT-licensed CRT shader. See vendor/RETROZONE-LICENSE.txt.
  */
@@ -475,7 +475,7 @@ if (output) {
             sourceContext.fillRect(rect.left + padding, rect.top + padding, 24, 2);
             sourceContext.font = `500 ${Math.max(7, Math.min(9, rect.width * .03))}px "DM Mono", monospace`;
             sourceContext.fillStyle = 'rgba(239, 210, 170, .55)';
-            if (!compact) sourceContext.fillText('MORLYN / ARCHIVO', rect.left + padding + 32, rect.top + padding + 4);
+            if (!compact) sourceContext.fillText('RAMIRO / ARCHIVO', rect.left + padding + 32, rect.top + padding + 4);
             sourceContext.font = `italic 900 ${Math.min(rect.height * (compact ? .45 : .38), rect.width * .18)}px "Barlow Condensed", sans-serif`;
             const label = video ? 'VIDEO' : 'IMAGEN';
             const x = rect.left + padding;

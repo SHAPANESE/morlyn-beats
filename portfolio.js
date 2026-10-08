@@ -168,7 +168,7 @@ if (portfolioGrid) {
           type: 'image',
           src: 'assets/works/prueba-modal.svg',
           title: 'Vista de prueba / Espacio para ' + (type === 'video' ? 'video' : 'imagen'),
-          alt: 'Imagen de prueba del portfolio Morlyn Beats',
+          alt: 'Imagen de prueba del portfolio Ramiro Lynn',
         }, open));
         card.addEventListener('click', event => { if (event.target !== open) open.click(); });
         media.append(icon, signal, open);

@@ -1,6 +1,6 @@
-# Morlyn Beats
+# Ramiro Lynn
 
-Single-screen landing page for Morlyn Beats, offering video editing, 3D animation and motion graphics with a full-page WebGL CRT treatment.
+Single-screen landing page for Ramiro Lynn, offering video editing, 3D animation and motion graphics with a full-page WebGL CRT treatment.
 
 ## Run locally
 
