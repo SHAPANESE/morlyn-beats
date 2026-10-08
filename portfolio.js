@@ -114,7 +114,8 @@ if (portfolioGrid) {
       expand.setAttribute('aria-label', 'Pantalla completa');
       expand.addEventListener('click', () => {
         if (document.fullscreenElement === hero) document.exitFullscreen().catch(() => {});
-        else hero.requestFullscreen?.().catch(() => {});
+        else if (document.fullscreenEnabled && hero.requestFullscreen) hero.requestFullscreen().catch(() => {});
+        else if (typeof full.webkitEnterFullscreen === 'function') full.webkitEnterFullscreen();
       });
       controls.append(play, seek, time, mute, expand);
       player.appendChild(controls);

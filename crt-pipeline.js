@@ -30,15 +30,15 @@ if (output) {
       precision mediump float;
 
       uniform sampler2D u_texture;
-      uniform vec2 u_resolution;
       uniform vec2 u_screen_resolution;
-      uniform float u_time;
+      uniform float u_noise_phase;
+      uniform float u_flicker;
       varying vec2 v_uv;
 
-      #define PI 3.14159265359
-
       float hash(vec2 p) {
-        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+        p = fract(p * vec2(0.1031, 0.11369));
+        p += dot(p, p.yx + 19.19);
+        return fract(p.x * p.y);
       }
 
       vec2 curveUV(vec2 uv) {
@@ -73,11 +73,10 @@ if (output) {
         vec2 texel = 1.0 / u_screen_resolution;
         vec3 color = sampleSource(uv);
 
-        vec3 bloom = color * 0.36;
-        bloom += sampleSource(uv + vec2(texel.x * 2.4, 0.0)) * 0.16;
-        bloom += sampleSource(uv - vec2(texel.x * 2.4, 0.0)) * 0.16;
-        bloom += sampleSource(uv + vec2(0.0, texel.y * 2.4)) * 0.16;
-        bloom += sampleSource(uv - vec2(0.0, texel.y * 2.4)) * 0.16;
+        // Horizontal phosphor glow: three texture reads instead of five.
+        vec3 bloom = color * 0.52;
+        bloom += sampleSource(uv + vec2(texel.x * 2.4, 0.0)) * 0.24;
+        bloom += sampleSource(uv - vec2(texel.x * 2.4, 0.0)) * 0.24;
         color += max(bloom - 0.34, 0.0) * 0.62;
 
         float horizontalRow = fract(uv.y * u_screen_resolution.y * 0.34);
@@ -88,11 +87,10 @@ if (output) {
         float edge = smoothstep(0.38, 1.18, dot(center, center));
         color *= 1.0 - edge * 0.30;
 
-        float grain = hash(gl_FragCoord.xy + floor(u_time * 18.0)) - 0.5;
+        float grain = hash(gl_FragCoord.xy + u_noise_phase) - 0.5;
         color += grain * 0.026;
 
-        float flicker = sin(u_time * 73.0) * 0.006 + sin(u_time * 17.0) * 0.008;
-        color *= 1.0 + flicker;
+        color *= 1.0 + u_flicker;
         color *= vec3(1.10, 1.065, 1.01);
         color = pow(max(color, vec3(0.0)), vec3(0.84));
         color = (color - 0.5) * 1.03 + 0.5;
@@ -127,9 +125,9 @@ if (output) {
       const positionLocation = gl.getAttribLocation(program, 'a_position');
       const uvLocation = gl.getAttribLocation(program, 'a_uv');
       const textureLocation = gl.getUniformLocation(program, 'u_texture');
-      const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
       const screenResolutionLocation = gl.getUniformLocation(program, 'u_screen_resolution');
-      const timeLocation = gl.getUniformLocation(program, 'u_time');
+      const noisePhaseLocation = gl.getUniformLocation(program, 'u_noise_phase');
+      const flickerLocation = gl.getUniformLocation(program, 'u_flicker');
 
       const quad = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -153,6 +151,14 @@ if (output) {
       const sourceContext = source.getContext('2d', { alpha: false });
       const isFirefox = navigator.userAgent.includes('Firefox');
       let renderScale = 1;
+      let qualityScale = 1;
+      try {
+        const storedQuality = Number(sessionStorage.getItem('morlyn-crt-quality'));
+        if (storedQuality >= .7 && storedQuality <= 1) qualityScale = storedQuality;
+      } catch {}
+      let lastQualityChange = performance.now();
+      let lastRenderedAt = 0;
+      let qualitySamples = [];
       let viewportWidth = 1;
       let viewportHeight = 1;
       let layout = null;
@@ -243,7 +249,11 @@ if (output) {
       };
       const updateActionHit = () => {
         if (!actionHit || !layout?.instagram.node) return;
-        const rect = rectOf(layout.instagram.node);
+        const originalRect = rectOf(layout.instagram.node);
+        const touchPadding = viewportWidth <= 800 ? 10 : 0;
+        const rect = { ...originalRect, left: originalRect.left - touchPadding, right: originalRect.right + touchPadding,
+          top: originalRect.top - touchPadding, bottom: originalRect.bottom + touchPadding,
+          width: originalRect.width + touchPadding * 2, height: originalRect.height + touchPadding * 2 };
         const points = [];
         // Sample the entire edge: a CRT turns straight source edges into arcs.
         for (let step = 0; step <= 12; step += 1) {
@@ -304,7 +314,7 @@ if (output) {
         // and scanlines still use CSS screen dimensions, independent of this scale.
         renderScale = Math.min(isFirefox ? .7 : 1,
           1600 / Math.max(viewportWidth, viewportHeight),
-          Math.sqrt(1200000 / (viewportWidth * viewportHeight)));
+          Math.sqrt(1200000 / (viewportWidth * viewportHeight))) * qualityScale;
         rectCache = new WeakMap();
         fontCache = new WeakMap();
         playerControlLayout = null;
@@ -376,7 +386,7 @@ if (output) {
         sourceContext.shadowOffsetX = 4;
         sourceContext.shadowOffsetY = 5;
 
-        const visibleCharacters = document.documentElement.classList.contains('channel-arrival')
+        const visibleCharacters = viewportWidth <= 800 || document.documentElement.classList.contains('channel-arrival')
           ? Infinity : Math.max(0, Math.floor((elapsed - 0.22) / 0.075));
         let characterOffset = 0;
         [...layout.title].forEach((line) => {
@@ -443,10 +453,11 @@ if (output) {
           if (ready) {
             const width = media.naturalWidth || media.videoWidth;
             const height = media.naturalHeight || media.videoHeight;
-            const scale = Math.min(rect.width / width, rect.height / height);
+            const scale = Math.max(rect.width / width, rect.height / height);
             sourceContext.drawImage(media, rect.left + (rect.width - width * scale) / 2, rect.top + (rect.height - height * scale) / 2, width * scale, height * scale);
           } else {
-            const padding = Math.max(12, rect.width * .065);
+            const compact = rect.height < 72;
+            const padding = compact ? 10 : Math.max(12, rect.width * .065);
             const backdrop = sourceContext.createLinearGradient(rect.left, rect.top, rect.right, rect.bottom);
             backdrop.addColorStop(0, 'rgba(239, 210, 170, .055)');
             backdrop.addColorStop(.6, 'rgba(239, 210, 170, .015)');
@@ -464,11 +475,11 @@ if (output) {
             sourceContext.fillRect(rect.left + padding, rect.top + padding, 24, 2);
             sourceContext.font = `500 ${Math.max(7, Math.min(9, rect.width * .03))}px "DM Mono", monospace`;
             sourceContext.fillStyle = 'rgba(239, 210, 170, .55)';
-            sourceContext.fillText('MORLYN / ARCHIVO', rect.left + padding + 32, rect.top + padding + 4);
-            sourceContext.font = `italic 900 ${Math.min(rect.height * .38, rect.width * .18)}px "Barlow Condensed", sans-serif`;
+            if (!compact) sourceContext.fillText('MORLYN / ARCHIVO', rect.left + padding + 32, rect.top + padding + 4);
+            sourceContext.font = `italic 900 ${Math.min(rect.height * (compact ? .45 : .38), rect.width * .18)}px "Barlow Condensed", sans-serif`;
             const label = video ? 'VIDEO' : 'IMAGEN';
             const x = rect.left + padding;
-            const y = rect.top + rect.height * .65;
+            const y = rect.top + rect.height * (compact ? .76 : .65);
             sourceContext.fillStyle = 'rgba(233, 92, 56, .65)';
             sourceContext.fillText(label, x + 2, y + 2);
             sourceContext.fillStyle = '#efd2aa';
@@ -478,7 +489,7 @@ if (output) {
             sourceContext.shadowBlur = 0;
             sourceContext.font = `400 ${Math.max(7, Math.min(9, rect.width * .03))}px "DM Mono", monospace`;
             sourceContext.fillStyle = 'rgba(239, 210, 170, .45)';
-            sourceContext.fillText('PROXIMAMENTE', x, rect.bottom - padding);
+            if (!compact) sourceContext.fillText('PROXIMAMENTE', x, rect.bottom - padding);
           }
           if ((media && video) || active) {
             sourceContext.fillStyle = 'rgba(0, 0, 0, .55)';
@@ -491,8 +502,23 @@ if (output) {
           sourceContext.restore();
           const caption = card.querySelector('figcaption');
           if (caption && bounds.caption) {
-            const paddingTop = parseFloat(cssFont(caption).style.paddingTop) || 0;
-            drawLabel(caption, { ...bounds.caption, top: bounds.caption.top + paddingTop }, undefined, { tracking: .08, blur: 3, color: active ? '#e95c38' : undefined });
+            const { style, font, size } = cssFont(caption);
+            const paddingTop = parseFloat(style.paddingTop) || 0;
+            let text = caption.textContent.trim();
+            sourceContext.font = font;
+            if (trackedWidth(sourceContext, text, size * .08) > bounds.caption.width) {
+              const ellipsis = '\u2026';
+              let width = sourceContext.measureText(ellipsis).width;
+              let shortened = '';
+              for (const character of text) {
+                const advance = sourceContext.measureText(character).width + size * .08;
+                if (width + advance > bounds.caption.width) break;
+                width += advance;
+                shortened += character;
+              }
+              text = shortened + ellipsis;
+            }
+            drawLabel(caption, { ...bounds.caption, top: bounds.caption.top + paddingTop }, text, { tracking: .08, blur: 3, color: active ? '#e95c38' : undefined });
           }
         });
         sourceContext.restore();
@@ -779,10 +805,27 @@ if (output) {
         }
 
         gl.uniform1i(textureLocation, 0);
-        gl.uniform2f(resolutionLocation, output.width, output.height);
         gl.uniform2f(screenResolutionLocation, viewportWidth, viewportHeight);
-        gl.uniform1f(timeLocation, elapsed);
+        gl.uniform1f(noisePhaseLocation, Math.floor(elapsed * 18) % 1024);
+        gl.uniform1f(flickerLocation, Math.sin(elapsed * 73) * .006 + Math.sin(elapsed * 17) * .008);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      };
+
+      const checkRenderBudget = (now, interval) => {
+        if (lastRenderedAt && now - startTime > 2000) qualitySamples.push(Math.min(now - lastRenderedAt, 300));
+        lastRenderedAt = now;
+        if (qualitySamples.length < 45) return;
+        const average = qualitySamples.reduce((sum, value) => sum + value, 0) / qualitySamples.length;
+        const missed = qualitySamples.filter(value => value > interval * 1.45).length / qualitySamples.length;
+        qualitySamples = [];
+        let next = qualityScale;
+        if (average > interval * 1.2 || missed > .3) next = Math.max(.7, qualityScale * .85);
+        else if (average < interval * 1.08 && missed < .03 && now - lastQualityChange > 12000) next = Math.min(1, qualityScale + .05);
+        if (next === qualityScale) return;
+        qualityScale = next;
+        lastQualityChange = now;
+        try { sessionStorage.setItem('morlyn-crt-quality', String(qualityScale)); } catch {}
+        resize();
       };
 
       let previousFrame = 0;
@@ -794,11 +837,12 @@ if (output) {
         const delta = now - previousFrame;
         if (delta >= interval - .5) {
           previousFrame = now - (delta >= interval ? delta % interval : 0);
+          if (!reducedMotion.matches) checkRenderBudget(now, interval);
           const elapsed = (now - startTime) / 1000;
           if (portfolioNeedsAlignment) alignPortfolioCards();
           const player = document.querySelector('.work-player');
           const video = player?.querySelector('video');
-          const typing = document.documentElement.classList.contains('channel-arrival')
+          const typing = viewportWidth <= 800 || document.documentElement.classList.contains('channel-arrival')
             ? titleCharacterCount : Math.min(titleCharacterCount, Math.max(0, Math.floor((elapsed - .22) / .075)));
           const flicker = getFlickerState(elapsed);
           const key = [window.morlynVhsSeconds(), player ? 'work' : typing,
@@ -815,6 +859,8 @@ if (output) {
       };
       const resumeFrames = () => {
         if (document.hidden || animationFrame !== undefined) return;
+        lastRenderedAt = 0;
+        qualitySamples = [];
         previousFrame = performance.now() - 1000 / 30;
         sourceDirty = true;
         animationFrame = requestAnimationFrame(frame);
