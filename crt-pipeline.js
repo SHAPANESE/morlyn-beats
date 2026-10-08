@@ -584,7 +584,9 @@ if (output) {
       const drawWorkDescription = player => {
         const node = player.matches('.hero-description') ? player : player.querySelector('.work-player-description');
         if (!node) return;
-        const rect = cachedRectOf(node);
+        const measuredRect = cachedRectOf(node);
+        const isHome = node.matches('.hero-description') && !document.body.classList.contains('channel-page');
+        const rect = isHome ? { ...measuredRect, width: node.clientWidth, right: measuredRect.left + node.clientWidth } : measuredRect;
         const { style, size, font } = cssFont(node);
         const lineHeight = parseFloat(style.lineHeight) || size * 1.6;
         sourceContext.save();
@@ -621,12 +623,25 @@ if (output) {
         cached.lines.forEach((line, index) => {
           const y = rect.top + index * lineHeight - node.scrollTop;
           if (y + lineHeight >= rect.top && y < rect.bottom) {
-            if (viewportWidth > 800 && node.matches('.hero-description') && !document.body.classList.contains('channel-page')) {
+            if (viewportWidth > 800 && isHome) {
               drawHomeTextLine(line, rect, y);
             } else sourceContext.fillText(line, rect.left, y);
           }
         });
         sourceContext.restore();
+        if (isHome && node.scrollHeight > node.clientHeight + 1) {
+          // The HTML source is transparent once the CRT takes over, so paint
+          // its scroll indicator into the screen as well.
+          const trackHeight = measuredRect.height;
+          const thumbHeight = Math.max(18, trackHeight * node.clientHeight / node.scrollHeight);
+          const progress = node.scrollTop / (node.scrollHeight - node.clientHeight);
+          sourceContext.save();
+          sourceContext.fillStyle = 'rgba(239, 210, 170, .22)';
+          sourceContext.fillRect(measuredRect.right - 3, measuredRect.top, 2, trackHeight);
+          sourceContext.fillStyle = '#e95c38';
+          sourceContext.fillRect(measuredRect.right - 4, measuredRect.top + progress * (trackHeight - thumbHeight), 3, thumbHeight);
+          sourceContext.restore();
+        }
       };
       const drawWorkPlayer = player => {
         const area = cachedRectOf(player.querySelector('.work-player-media'));

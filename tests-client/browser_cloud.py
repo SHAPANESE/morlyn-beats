@@ -129,6 +129,9 @@ def main():
                 instagram_box = home.locator('.primary-action').bounding_box()
                 assert instagram_box['y'] > text_box['y'] + text_box['height']
                 home.screenshot(path=str(ROOT/'tests-client/home-text-mobile.png'))
+                home.set_viewport_size({'width':320,'height':568})
+                home.wait_for_timeout(500)
+                assert home.locator('.hero-description').evaluate('n=>n.getBoundingClientRect().top>document.querySelector(".service-index").getBoundingClientRect().bottom')
                 home.set_viewport_size({'width':1440,'height':1000})
                 home.wait_for_timeout(500)
                 home.screenshot(path=str(ROOT/'tests-client/home-text-desktop.png'))
@@ -137,6 +140,8 @@ def main():
                 expect(home.locator('.hero-description')).to_have_text(('Texto de portada. ' * 30).strip())
                 home.set_viewport_size({'width':390,'height':844})
                 home.wait_for_timeout(500)
+                assert home.locator('.hero-description').evaluate('n=>parseFloat(getComputedStyle(n).fontSize)>=16')
+                assert home.locator('.hero-description').evaluate('n=>n.scrollHeight>n.clientHeight')
                 if home.locator('.hero-description').evaluate('n=>n.scrollHeight>n.clientHeight+1'):
                     home.locator('.hero-description').focus()
                     home.keyboard.press('End')

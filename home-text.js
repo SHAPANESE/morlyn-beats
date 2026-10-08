@@ -7,7 +7,8 @@
     if (!node.textContent) return;
     node.style.fontSize = '';
     let size = parseFloat(getComputedStyle(node).fontSize);
-    while (node.scrollHeight > node.clientHeight + 1 && size > 10) {
+    const minimum = matchMedia('(max-width: 800px) and (orientation: portrait)').matches ? 16 : 10;
+    while (node.scrollHeight > node.clientHeight + 1 && size > minimum) {
       size -= 1;
       node.style.fontSize = size + 'px';
     }
