@@ -725,7 +725,9 @@ if (output) {
           sourceContext.fillStyle = '#e95c38';
           sourceContext.shadowColor = 'rgba(233, 92, 56, .45)';
           sourceContext.shadowBlur = 3;
-          sourceContext.fillText(jp.node.textContent.trim(), jp.rect.right, jp.rect.top);
+          jp.node.innerHTML.split(/<br\s*\/?\s*>/i).forEach((line, index) => {
+            sourceContext.fillText(line.trim(), jp.rect.right, jp.rect.top + index * size * .88);
+          });
           sourceContext.textAlign = 'left';
           sourceContext.shadowColor = 'transparent';
           sourceContext.shadowBlur = 0;
