@@ -11,7 +11,15 @@ const cloudTypes = {'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp
 const cloudMax = Math.min(Number(cloudConfig.maxFileBytes) || 50 * 1024 ** 2, 50 * 1024 ** 2);
 const cloudUpdates = 'BroadcastChannel' in window ? new BroadcastChannel('morlyn-portfolio-updates') : null;
 let cloudUploading = false, cloudPreviewUrl = '', cloudWorks = [], cloudRecovery = false;
-function cloudMessage(text) { cloudStatus.textContent = text; }
+function cloudMessage(text) {
+  cloudStatus.textContent = text;
+  cloudStatus.dataset.tone = /^(No |Esta cuenta|Email o|Falta |La imagen|El archivo|Revisá|Pegá)/.test(text) ? 'error' : 'info';
+}
+function cloudUpdateSubmit() {
+  if (cloudUploading) return;
+  cloudForm.querySelector('[type=submit]').textContent = !cloudForm.elements.published.checked ? 'Guardar borrador'
+    : document.querySelector('#work-type').value === 'youtube' ? 'Publicar video ↗' : 'Publicar imagen ↗';
+}
 function cloudNotify() { cloudUpdates?.postMessage('refresh'); }
 function cloudClearPreview() {
   cloudPreview.replaceChildren();
@@ -30,7 +38,24 @@ function cloudSource() {
   document.querySelector('#work-file').required = !youtube;
   document.querySelector('#youtube-url').required = youtube;
   cloudClearPreview();
+  cloudUpdateSubmit();
 }
+cloudForm.elements.published.addEventListener('change', cloudUpdateSubmit);
+let cloudPreviewTimer;
+document.querySelector('#youtube-url').addEventListener('input', () => {
+  clearTimeout(cloudPreviewTimer);
+  cloudPreviewTimer = setTimeout(() => {
+    if (document.querySelector('#work-type').value !== 'youtube') return;
+    cloudClearPreview();
+    try {
+      const id = window.morlynYouTube.id(document.querySelector('#youtube-url').value);
+      const image = document.createElement('img'); image.src = window.morlynYouTube.thumbnail(id); image.alt = 'Miniatura del video seleccionado';
+      image.addEventListener('error', () => image.remove(), {once:true});
+      const caption = document.createElement('p'); caption.className = 'preview-caption'; caption.textContent = 'Video de YouTube listo para publicar.';
+      cloudPreview.append(image, caption);
+    } catch { /* The form validates incomplete links when submitting. */ }
+  }, 250);
+});
 document.querySelector('#work-type').addEventListener('change', cloudSource);
 document.querySelector('#work-file').addEventListener('change', event => {
   cloudClearPreview();
@@ -39,11 +64,14 @@ document.querySelector('#work-file').addEventListener('change', event => {
     const file = event.target.files[0]; cloudValidateImage(file);
     cloudPreviewUrl = URL.createObjectURL(file);
     const image = document.createElement('img'); image.src = cloudPreviewUrl; image.alt = 'Vista previa del trabajo'; cloudPreview.append(image);
+    const caption = document.createElement('p'); caption.className = 'preview-caption'; caption.textContent = file.name + ' · ' + (file.size / 1024 ** 2).toLocaleString('es-AR', {maximumFractionDigits:2}) + ' MB'; cloudPreview.append(caption);
     cloudMessage('');
   } catch (error) { event.target.value = ''; cloudMessage(error.message); }
 });
-document.querySelector('#cloud-upload-limits').textContent = `JPG, PNG, WebP o GIF. Hasta ${Math.round(cloudMax / 1024 ** 2)} MB por imagen; 1 GB de almacenamiento total en Supabase Free.`;
+document.querySelector('#cloud-upload-limits').textContent = `JPG, PNG, WebP o GIF. Hasta ${Math.round(cloudMax / 1024 ** 2)} MB por imagen; 1 GB de espacio total compartido.`;
 function cloudHideSession() {
+  document.body.classList.remove('admin-is-ready');
+  document.querySelector('#dashboard-nav').hidden = true;
   document.querySelector('#login-panel').hidden = false;
   ['#home-text-panel', '#upload-panel', '#published-panel', '#account-panel'].forEach(id => document.querySelector(id).hidden = true);
   document.querySelector('#home-text-form').reset();
@@ -59,12 +87,22 @@ function cloudRenderWorks() {
   const list = document.querySelector('#published-works'), filter = document.querySelector('#works-filter').value;
   list.replaceChildren();
   const visible = cloudWorks.filter(work => filter === 'all' || work.channel === filter);
-  if (!visible.length) { list.textContent = 'Todavía no hay trabajos en esta selección.'; return; }
+  document.querySelector('#nav-work-count').textContent = String(cloudWorks.length);
+  const published = visible.filter(work => work.published).length;
+  document.querySelector('#works-count').textContent = visible.length + ' trabajos · ' + published + ' publicados · ' + (visible.length - published) + ' borradores';
+  if (!visible.length) {
+    const empty = document.createElement('div'); empty.className = 'empty-state';
+    const title = document.createElement('strong'); title.textContent = cloudWorks.length ? 'No hay trabajos en esta sección.' : 'Tu portfolio empieza con una idea.';
+    const hint = document.createElement('p'); hint.textContent = 'Publicá una imagen o un video y aparecerá acá.';
+    const link = document.createElement('a'); link.href = '#upload-panel'; link.textContent = 'Publicar un trabajo ↗';
+    empty.append(title, hint, link); list.append(empty); return;
+  }
   for (const work of visible) {
     const row = document.createElement('article'); row.className = 'published-work';
     const details = document.createElement('div'); details.className = 'work-details';
     const title = document.createElement('strong'); title.textContent = 'CH ' + work.channel + ' / ' + work.title;
     const state = document.createElement('span'); state.className = 'work-state'; state.textContent = work.published ? 'PUBLICADO' : 'BORRADOR';
+    state.classList.toggle('is-draft', !work.published);
     const description = document.createElement('p'); description.textContent = work.description;
     details.append(title, state, description);
     const actions = document.createElement('div'); actions.className = 'work-actions';
@@ -77,7 +115,7 @@ function cloudRenderWorks() {
       form.elements.id.value = work.id; form.elements.title.value = work.title; form.elements.description.value = work.description; form.elements.published.checked = work.published;
       document.querySelector('#edit-status').textContent = ''; document.querySelector('#edit-work-dialog').showModal();
     });
-    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'secondary'; remove.textContent = 'Eliminar';
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'secondary danger'; remove.textContent = 'Eliminar';
     remove.addEventListener('click', async () => {
       if (!confirm(`¿Eliminar «${work.title}» del portfolio? Esta acción no se puede deshacer.`)) return;
       remove.disabled = true;
@@ -111,6 +149,8 @@ async function cloudShowSession() {
     await cloud.auth.signOut({scope: 'local'}); cloudHideSession(); cloudMessage('Esta cuenta no está autorizada para administrar el portfolio.'); return;
   }
   document.querySelector('#login-panel').hidden = true;
+  document.body.classList.add('admin-is-ready');
+  document.querySelector('#dashboard-nav').hidden = false;
   ['#home-text-panel', '#upload-panel', '#published-panel', '#account-panel'].forEach(id => document.querySelector(id).hidden = false);
   document.querySelector('#owner-email').textContent = session.user.email;
   await Promise.all([cloudListWorks(), cloudLoadHomeText()]);
@@ -128,6 +168,7 @@ async function cloudLoadHomeText() {
       return;
     }
     document.querySelector('#home-text').value = result.data?.body || '';
+    window.dispatchEvent(new Event('morlyn-home-editor-loaded'));
     status.textContent = '';
     button.disabled = false;
   } catch { status.textContent = 'No pudimos cargar el texto. Recargá el panel para intentar de nuevo.'; }
@@ -153,6 +194,7 @@ if (!cloud) {
       const result = await cloud.from('portfolio_site_content').upsert({id: 'home', body}, {onConflict: 'id'}).select('body').single();
       if (result.error) throw new Error('No pudimos guardar el texto. Revisá tu conexión e intentá de nuevo.');
       document.querySelector('#home-text').value = result.data.body;
+      window.dispatchEvent(new Event('morlyn-home-editor-loaded'));
       status.textContent = 'Texto de portada guardado.';
       cloudNotify();
     }, '#home-text-status');
@@ -192,6 +234,8 @@ if (!cloud) {
       if (!youtube) cloudValidateImage(file);
       row = {id: crypto.randomUUID(), channel, title, description, media_type: youtube ? 'youtube' : 'image', media_path: null, video_id: videoId, published: values.has('published')};
       cloudUploading = true; cloudFields.disabled = true; document.querySelector('#logout').disabled = true;
+      cloudForm.setAttribute('aria-busy', 'true');
+      cloudForm.querySelector('[type=submit]').textContent = 'Guardando…';
       if (!youtube) {
         objectPath = channel + '/' + row.id + '.' + cloudTypes[file.type]; row.media_path = objectPath;
         const session = await cloud.auth.getSession();
@@ -225,6 +269,7 @@ if (!cloud) {
       else cloudMessage(error.message?.match(/^(Elegí|La imagen|El archivo|Revisá|Pegá|La sesión)/) ? error.message : 'No se pudo guardar. Conservamos los datos; revisá la conexión y volvé a intentar.');
     } finally {
       cloudUploading = false; cloudFields.disabled = false; document.querySelector('#logout').disabled = false; cloudProgress.hidden = true;
+      cloudForm.removeAttribute('aria-busy'); cloudUpdateSubmit();
     }
   });
   document.querySelector('#edit-work-form').addEventListener('submit', event => {

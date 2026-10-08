@@ -10,63 +10,72 @@
   </head>
   <body>
     <main class="admin-shell">
-      <header>
-        <a href="index.html">← VER SITIO</a>
-        <p class="kicker">RAMIRO LYNN / CONTROL DE CANALES</p>
-        <h1>TUS TRABAJOS</h1>
-        <p>Publicá imágenes y videos de YouTube, con su texto, en las cuatro secciones del portfolio.</p>
+      <header class="dashboard-header">
+        <div><p class="kicker">RAMIRO LYNN / PANEL PRIVADO</p><h1>TU PORTFOLIO</h1><p class="header-description">Tus ideas, tus trabajos, tu espacio. Actualizá el sitio desde acá.</p></div>
+        <a class="site-link" href="index.html" target="_blank" rel="noopener">Ver sitio ↗</a>
       </header>
+      <aside id="dashboard-nav" class="dashboard-sidebar" hidden>
+        <p class="nav-caption">EDITAR SITIO</p>
+        <nav aria-label="Secciones del panel">
+          <a href="#upload-panel" aria-current="location"><span class="nav-number">01</span>Publicar trabajo</a>
+          <a href="#published-panel"><span class="nav-number">02</span>Tus trabajos <span id="nav-work-count" class="nav-count">0</span></a>
+          <a href="#home-text-panel"><span class="nav-number">03</span>Texto de portada</a>
+          <a href="#account-panel"><span class="nav-number">04</span>Cuenta y accesos</a>
+        </nav>
+        <div class="session-actions"><p>Los cambios guardados se reflejan en tu sitio.</p><button id="logout" type="button" class="secondary">Cerrar sesión</button></div>
+      </aside>
       <p id="admin-status" role="status" aria-live="polite"></p>
-      <section id="login-panel" class="panel">
-        <h2>Entrar al panel</h2>
+      <section id="login-panel" class="panel login-card">
+        <p class="section-eyebrow">BIENVENIDO</p><h2>Tu próximo trabajo empieza acá.</h2><p class="section-description">Entrá con tu cuenta para publicar y editar tu portfolio.</p>
         <form id="login-form">
           <label>Email<input type="email" name="email" autocomplete="username" required /></label>
-          <label>Contraseña<input type="password" name="password" autocomplete="current-password" required /></label>
+          <label>Contraseña<span class="password-field"><input id="login-password" type="password" name="password" autocomplete="current-password" required /><button type="button" class="password-toggle" data-password-target="login-password" aria-pressed="false">Mostrar</button></span></label>
           <label class="check"><input type="checkbox" name="remember" />Recordarme en este dispositivo</label>
-          <button type="submit">ENTRAR</button>
+          <button type="submit">Entrar al panel ↗</button>
           <button id="forgot-password" type="button" class="secondary" hidden>OLVIDÉ MI CONTRASEÑA</button>
         </form>
       </section>
-      <section id="home-text-panel" class="panel" hidden>
-        <h2>Texto de portada</h2>
-        <form id="home-text-form">
-          <label>Sobre vos<textarea id="home-text" name="body" rows="7" maxlength="600" aria-describedby="home-text-hint"></textarea></label>
-          <p id="home-text-hint" class="hint">Aparece a la derecha de los canales en la portada. Hasta 600 caracteres. Dejalo vacío para ocultarlo.</p>
-          <button type="submit" disabled>GUARDAR TEXTO</button>
-          <p id="home-text-status" role="status" aria-live="polite"></p>
-        </form>
-      </section>
       <section id="upload-panel" class="panel" hidden>
-        <div class="panel-heading"><h2>Publicar un trabajo</h2><button id="logout" type="button" class="secondary">SALIR</button></div>
+        <p class="section-eyebrow">01 / PUBLICAR</p><h2>Un nuevo trabajo.</h2><p class="section-description">Elegí el contenido, contá qué hiciste y dale un lugar en tu portfolio.</p>
         <form id="upload-form">
           <fieldset id="upload-fields">
-            <label>Canal<select name="channel" required>
+            <p class="step-label">01 <span>Contenido y sección</span></p>
+            <div class="form-grid">
+            <label>Sección<select name="channel" required>
               <option value="01">01 — Ediciones de video</option>
               <option value="02">02 — Ediciones de video redes</option>
               <option value="03">03 — Animación 3D</option>
               <option value="04">04 — Motion graphics</option>
             </select></label>
-            <label>Título del trabajo<input name="title" maxlength="160" required /></label>
-            <label>Texto del trabajo (opcional)<textarea name="description" rows="4" maxlength="5000" placeholder="Contá de qué trata o qué hiciste en este trabajo."></textarea></label>
             <label>Tipo de trabajo<select id="work-type" name="type"><option value="image">Imagen</option><option value="youtube">Video de YouTube</option></select></label>
-            <div id="image-source"><label class="file-picker">Imagen<input id="work-file" type="file" name="file" accept="image/jpeg,image/png,image/webp,image/gif" required /></label><p id="cloud-upload-limits" class="hint">JPG, PNG, WebP o GIF. Hasta 50 MB por imagen; 1 GB de almacenamiento total en Supabase Free.</p></div>
-            <div id="youtube-source" hidden><label>Enlace del video<input id="youtube-url" type="url" name="youtube_url" placeholder="https://youtu.be/…" /></label><p class="hint">Subí el video a YouTube como «No listado» y pegá su enlace. Debe permitir la reproducción insertada.</p></div>
-            <label class="check"><input name="published" type="checkbox" checked />Mostrar en el portfolio al terminar</label>
+            </div>
+            <div id="image-source" class="source-box"><label class="file-picker">Seleccioná una imagen<input id="work-file" type="file" name="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-describedby="cloud-upload-limits" required /></label><p id="cloud-upload-limits" class="hint">JPG, PNG, WebP o GIF. Hasta 50 MB por imagen.</p></div>
+            <div id="youtube-source" class="source-box" hidden><label>Enlace de YouTube<input id="youtube-url" type="url" name="youtube_url" placeholder="https://youtu.be/…" /></label><p class="hint">Puede ser público o no listado. Debe permitir la reproducción insertada.</p></div>
             <div id="file-preview" class="file-preview"></div>
-            <button type="submit">SUBIR Y PUBLICAR</button>
+            <p class="step-label details-step">02 <span>La historia detrás</span></p>
+            <label>Título del trabajo<input name="title" maxlength="160" placeholder="Un nombre para este proyecto" required /></label>
+            <label>Descripción (opcional)<textarea name="description" rows="4" maxlength="5000" placeholder="Contá de qué trata y cuál fue tu participación."></textarea></label>
+            <div class="publish-footer"><label class="check"><input name="published" type="checkbox" checked /><span>Publicar en el sitio<small>Si lo desmarcás, se guarda como borrador.</small></span></label><button type="submit">Publicar imagen ↗</button></div>
           </fieldset>
           <progress id="upload-progress" max="100" value="0" aria-label="Progreso de la subida" hidden></progress>
         </form>
-        <p>Cuando termine la subida, el trabajo aparecerá en la galería del canal.</p>
       </section>
       <section id="published-panel" class="panel" hidden>
-        <h2>Tus trabajos</h2>
-        <label>Filtrar canal<select id="works-filter"><option value="all">Todos los canales</option><option value="01">Video TV</option><option value="02">Video redes</option><option value="03">Animación 3D</option><option value="04">Motion graphics</option></select></label>
-        <button id="reload-works" class="secondary" type="button">ACTUALIZAR LISTA</button>
+        <div class="panel-heading"><div><p class="section-eyebrow">02 / PORTFOLIO</p><h2>Tus trabajos.</h2><p id="works-count" class="section-description">Cargando trabajos…</p></div><button id="reload-works" class="secondary" type="button">Actualizar lista</button></div>
+        <label class="works-filter">Ver sección<select id="works-filter"><option value="all">Todos los canales</option><option value="01">Video TV</option><option value="02">Video redes</option><option value="03">Animación 3D</option><option value="04">Motion graphics</option></select></label>
         <div id="published-works"></div>
       </section>
-      <section id="account-panel" class="panel" hidden><h2>Cuenta y accesos</h2><p id="owner-email"></p><form id="change-password-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><label>Repetí la nueva contraseña<input name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><button type="submit">CAMBIAR CONTRASEÑA</button></form><p>Podés cerrar los accesos de otros dispositivos que ya no uses.</p><button id="close-other-sessions" type="button" class="secondary">CERRAR OTRAS SESIONES</button></section>
-      <dialog id="edit-work-dialog"><h2>Editar trabajo</h2><form id="edit-work-form"><input name="id" type="hidden" /><label>Título<input name="title" maxlength="160" required /></label><label>Texto<textarea name="description" rows="5" maxlength="5000"></textarea></label><label class="check"><input name="published" type="checkbox" />Mostrar en el portfolio</label><button type="submit">GUARDAR CAMBIOS</button><button id="close-edit" class="secondary" type="button">CANCELAR</button><p id="edit-status" role="status"></p></form></dialog>
+      <section id="home-text-panel" class="panel" hidden>
+        <p class="section-eyebrow">03 / PORTADA</p><h2>Contá quién sos.</h2><p class="section-description">Este texto aparece junto a los canales en la página de inicio.</p>
+        <form id="home-text-form">
+          <label>Texto de portada<textarea id="home-text" name="body" rows="7" maxlength="600" placeholder="Tu mirada, lo que hacés y lo que te mueve…" aria-describedby="home-text-hint home-text-counter"></textarea></label>
+          <div class="field-meta"><p id="home-text-hint" class="hint">Dejalo vacío para ocultarlo. Podés usar saltos de línea.</p><span id="home-text-counter">0 / 600</span></div>
+          <div class="form-actions"><button type="submit" disabled>Guardar texto</button><a href="index.html" target="_blank" rel="noopener">Ver portada ↗</a></div>
+          <p id="home-text-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+      <section id="account-panel" class="panel" hidden><p class="section-eyebrow">04 / CUENTA</p><h2>Tu acceso, bajo control.</h2><p id="owner-email"></p><details class="account-details"><summary>Cambiar contraseña</summary><form id="change-password-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><label>Repetí la nueva contraseña<input name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><button type="submit">CAMBIAR CONTRASEÑA</button></form></details><p>Podés cerrar los accesos de otros dispositivos que ya no uses.</p><button id="close-other-sessions" type="button" class="secondary">CERRAR OTRAS SESIONES</button></section>
+      <dialog id="edit-work-dialog" aria-labelledby="edit-dialog-title"><p class="section-eyebrow">EDITAR TRABAJO</p><h2 id="edit-dialog-title">Detalles del trabajo</h2><form id="edit-work-form"><input name="id" type="hidden" /><label>Título<input name="title" maxlength="160" required /></label><label>Texto<textarea name="description" rows="5" maxlength="5000"></textarea></label><label class="check"><input name="published" type="checkbox" />Mostrar en el portfolio</label><button type="submit">GUARDAR CAMBIOS</button><button id="close-edit" class="secondary" type="button">CANCELAR</button><p id="edit-status" role="status"></p></form></dialog>
       <dialog id="recovery-dialog"><h2>Nueva contraseña</h2><form id="recovery-password-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><label>Repetí la contraseña<input name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><button type="submit">GUARDAR CONTRASEÑA</button><p id="recovery-status" role="status"></p></form></dialog>
     </main>
     <script src="vendor/supabase-2.117.3.js"></script>
@@ -74,5 +83,6 @@
     <script src="backend-config.js"></script>
     <script src="backend.js"></script>
     <script src="admin-cloud.js"></script>
+    <script src="admin-ui.js"></script>
   </body>
 </html>
