@@ -725,9 +725,7 @@ if (output) {
           sourceContext.fillStyle = '#e95c38';
           sourceContext.shadowColor = 'rgba(233, 92, 56, .45)';
           sourceContext.shadowBlur = 3;
-          ['モーリン', 'ビーツ'].forEach((line, index) => {
-            sourceContext.fillText(line, jp.rect.right, jp.rect.top + index * size * 0.88);
-          });
+          sourceContext.fillText(jp.node.textContent.trim(), jp.rect.right, jp.rect.top);
           sourceContext.textAlign = 'left';
           sourceContext.shadowColor = 'transparent';
           sourceContext.shadowBlur = 0;
