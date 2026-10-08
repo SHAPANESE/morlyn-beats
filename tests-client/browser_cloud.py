@@ -105,7 +105,8 @@ def main():
                 expect(gallery.locator('.work-player iframe')).to_have_attribute('src','https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0&controls=0&enablejsapi=1&origin='+origin.replace(':','%3A').replace('/','%2F'))
                 expect(gallery.locator('.work-player-description')).to_have_text('Texto del video <sin HTML>')
                 expect(gallery.locator('.work-player-external')).to_have_count(0)
-                assert 'polygon(' in gallery.locator('.work-player-media').evaluate('(node)=>getComputedStyle(node).clipPath')
+                assert gallery.locator('.work-player-media').evaluate('(node)=>getComputedStyle(node).clipPath') == 'none'
+                assert gallery.locator('.work-player iframe').evaluate('(node)=>getComputedStyle(node).borderRadius') == '0px'
                 play = gallery.get_by_role('button',name='Reproducir video',exact=True)
                 expect(play).to_be_enabled()
                 play.click(force=True)

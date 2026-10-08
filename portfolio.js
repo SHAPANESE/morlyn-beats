@@ -3,36 +3,6 @@ if (portfolioGrid) {
   const portfolio = portfolioGrid.closest('.portfolio');
   const emptyMessage = document.querySelector('.portfolio-empty');
   const channel = document.body.dataset.channel;
-  const curveYouTube = area => {
-    // Cross-origin iframe pixels cannot be sampled by the page's CRT shader.
-    // Curve the visible glass outline; keep the native player's hit areas intact.
-    const resize = () => {
-      const width = area.clientWidth, height = area.clientHeight;
-      if (!width || !height) return;
-      const points = [];
-      const point = (x, y) => {
-        const nx = x * 2 - 1, ny = y * 2 - 1;
-        const radius = nx * nx + ny * ny;
-        let scale = 1;
-        // Match the page shader's barrel coefficient at every screen size.
-        const curvature = .115;
-        for (let step = 0; step < 6; step++) {
-          scale -= (scale + curvature * radius * scale ** 3 - 1) / (1 + 3 * curvature * radius * scale ** 2);
-        }
-        const px = (nx * scale + 1) * width / 2;
-        const py = (ny * scale + 1) * height / 2;
-        points.push(`${(px / width * 100).toFixed(3)}% ${(py / height * 100).toFixed(3)}%`);
-      };
-      for (let i = 0; i <= 24; i++) point(i / 24, 0);
-      for (let i = 1; i <= 24; i++) point(1, i / 24);
-      for (let i = 1; i <= 24; i++) point(1 - i / 24, 1);
-      for (let i = 1; i < 24; i++) point(0, 1 - i / 24);
-      area.style.clipPath = 'polygon(' + points.join(',') + ')';
-    };
-    resize();
-    const observer = new ResizeObserver(resize); observer.observe(area);
-    return () => observer.disconnect();
-  };
   const openWork = (work, open) => {
     if (document.querySelector('.work-player')) return;
     const hero = document.querySelector('.hero');
@@ -95,7 +65,6 @@ if (portfolioGrid) {
       player.appendChild(description);
     }
     const listener = new AbortController();
-    let releaseCurve = () => {};
     let releaseYouTube = () => {};
     const proxy = document.querySelector('.crt-action-hit');
     const copy = document.querySelector('.hero-copy');
@@ -103,7 +72,6 @@ if (portfolioGrid) {
       if (work.type === 'video') full.pause();
       if (document.fullscreenElement === hero) document.exitFullscreen().catch(() => {});
       listener.abort();
-      releaseCurve();
       releaseYouTube();
       player.remove();
       window.dispatchEvent(new Event('morlyn-work-changed'));
@@ -178,7 +146,6 @@ if (portfolioGrid) {
     document.body.classList.add('work-is-open');
     hero.appendChild(player);
     if (youtube) {
-      releaseCurve = curveYouTube(mediaArea);
       import('./youtube-player.js').then(({mountYouTubeControls}) => {
         if (!player.isConnected) return;
         releaseYouTube = mountYouTubeControls({iframe: full, container: player, fullscreenTarget: hero, status, fallbackUrl: window.morlynYouTube.embed(work.videoId)});
