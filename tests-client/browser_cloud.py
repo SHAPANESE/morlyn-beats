@@ -27,6 +27,7 @@ def main():
         rows, errors, upload_requests = [], [], []
         image = io.BytesIO(); Image.new('RGB', (320, 240), 'orange').save(image, 'PNG')
         allowed = [True]
+        home_text = ['']
         def fulfill(route, data, status=200, headers=None):
             route.fulfill(status=status, body=json.dumps(data), headers={
                 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*',
@@ -45,6 +46,12 @@ def main():
                 return fulfill(route, {'access_token':token,'token_type':'bearer','expires_in':3600,'refresh_token':'test-refresh','user':{'id':OWNER,'email':'cliente@example.com','aud':'authenticated','role':'authenticated'}})
             if p == '/auth/v1/logout': return fulfill(route, {})
             if p == '/rest/v1/rpc/is_portfolio_admin': return fulfill(route, allowed[0])
+            if p == '/rest/v1/portfolio_site_content':
+                if method == 'POST':
+                    if not allowed[0]: return fulfill(route, {'message':'Permission denied'}, 403)
+                    home_text[0] = data['body']
+                    return fulfill(route, {'body':home_text[0]}, 201)
+                return fulfill(route, [{'body':home_text[0]}])
             if p == '/rest/v1/portfolio_works':
                 if method == 'POST': rows.insert(0, data); return fulfill(route, None, 201)
                 selected = [row for row in rows if all(row.get(key) == value[0][3:] for key,value in q.items() if key in ['id','channel'])]
@@ -86,6 +93,54 @@ def main():
                 page.locator('#login-form [name=password]').fill('a private password 2026')
                 page.locator('#login-form [type=submit]').click()
                 expect(page.locator('#upload-panel')).to_be_visible()
+                expect(page.locator('#home-text-form [type=submit]')).to_be_enabled()
+                home = context.new_page(); home.on('pageerror', lambda error: errors.append(str(error)))
+                home.goto(origin+'/index.html')
+                expect(home.locator('.hero-description')).to_be_empty()
+                introduction = 'Editor de video y animador.\nIdeas que se convierten en imagen. <sin HTML>'
+                page.locator('#home-text').fill(introduction)
+                page.locator('#home-text-form [type=submit]').click()
+                expect(page.locator('#home-text-status')).to_have_text('Texto de portada guardado.')
+                expect(home.locator('.hero-description')).to_have_text(introduction)
+                expect(home.locator('.hero-description')).to_be_visible()
+                expect(home.locator('.hero-description *')).to_have_count(0)
+                home.reload()
+                expect(home.locator('.hero-description')).to_have_text(introduction)
+                home.set_viewport_size({'width':390,'height':844})
+                home.wait_for_timeout(500)
+                text_box = home.locator('.hero-description').bounding_box()
+                assert text_box['x'] >= 0 and text_box['x'] + text_box['width'] <= 390
+                assert text_box['y'] + text_box['height'] < 844
+                home.screenshot(path=str(ROOT/'tests-client/home-text-mobile.png'))
+                home.set_viewport_size({'width':1440,'height':1000})
+                home.wait_for_timeout(500)
+                home.screenshot(path=str(ROOT/'tests-client/home-text-desktop.png'))
+                page.locator('#home-text').fill('Texto de portada. ' * 30)
+                page.locator('#home-text-form [type=submit]').click()
+                expect(home.locator('.hero-description')).to_have_text(('Texto de portada. ' * 30).strip())
+                home.set_viewport_size({'width':390,'height':844})
+                home.wait_for_timeout(500)
+                if home.locator('.hero-description').evaluate('n=>n.scrollHeight>n.clientHeight+1'):
+                    home.locator('.hero-description').focus()
+                    home.keyboard.press('End')
+                    home.wait_for_timeout(300)
+                    assert home.locator('.hero-description').evaluate('n=>n.scrollTop>0')
+                page.locator('#home-text').fill('')
+                page.locator('#home-text-form [type=submit]').click()
+                expect(home.locator('.hero-description')).to_be_hidden()
+                home.close()
+                context.route('**/rest/v1/portfolio_site_content*', lambda route: fulfill(route, {'code':'PGRST205','message':'Table missing'}, 404))
+                unconfigured = context.new_page()
+                unconfigured.on('pageerror', lambda error: errors.append(str(error)))
+                unconfigured.goto(origin+'/admin.html')
+                unconfigured.locator('#login-form [name=email]').fill('cliente@example.com')
+                unconfigured.locator('#login-form [name=password]').fill('a private password 2026')
+                unconfigured.locator('#login-form [type=submit]').click()
+                expect(unconfigured.locator('#upload-panel')).to_be_visible()
+                expect(unconfigured.locator('#home-text-status')).to_contain_text('todavía no está activada')
+                expect(unconfigured.locator('#home-text-form [type=submit]')).to_be_disabled()
+                unconfigured.close()
+                context.unroute('**/rest/v1/portfolio_site_content*')
                 gallery = context.new_page(); gallery.on('pageerror', lambda error: errors.append(str(error)))
                 gallery.goto(origin+'/motion-graphics.html')
                 expect(gallery.locator('.portfolio-placeholder')).to_have_count(8)
@@ -181,6 +236,7 @@ def main():
                 page.locator('#login-form [type=submit]').click()
                 expect(page.locator('#admin-status')).to_contain_text('no está autorizada')
                 expect(page.locator('#upload-panel')).to_be_hidden()
+                expect(page.locator('#home-text-panel')).to_be_hidden()
                 assert not errors, errors
                 browser.close()
                 print('Cloud browser OK: real SDK login, YouTube, TUS image, signed URLs, descriptions, drafts, placeholders, deletion, logout and unauthorized account.')

@@ -58,3 +58,7 @@ node tests-client/test_cloud_sql.cjs
 La prueba SQL utiliza PostgreSQL local mediante PGlite; instalarlo según el encabezado del archivo de prueba o indicar `PGLITE_MODULE`. La prueba cloud utiliza el SDK real con respuestas de Supabase simuladas; la validación de conexión, cuenta y cuotas requiere el proyecto remoto real.
 
 Documentación: [límites de archivos](https://supabase.com/docs/guides/storage/uploads/file-limits), [planes](https://supabase.com/pricing), [claves públicas](https://supabase.com/docs/guides/getting-started/api-keys), [SMTP](https://supabase.com/docs/guides/auth/auth-smtp), [cierre de sesiones](https://supabase.com/docs/guides/auth/signout).
+
+## Texto de portada
+
+En proyectos ya configurados, ejecuta `supabase-home-text.sql` una vez en SQL Editor. Luego el cliente puede guardar o quitar el texto desde el panel Texto de portada. Solo el propietario autorizado puede modificarlo; los visitantes pueden leerlo.

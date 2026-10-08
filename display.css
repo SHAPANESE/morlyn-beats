@@ -1129,3 +1129,19 @@ a, button, input { -webkit-tap-highlight-color: transparent; }
 .work-player-controls.is-minimal { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
 .work-player-controls.is-minimal button { width: 44px; min-height: 44px; padding: 0; font-size: 18px; text-align: center; }
 .work-player-controls.is-minimal .work-player-seek { width: 0; min-width: 40px; height: 44px; }
+.work-player-header { position: relative; top: -18px; }
+@media (max-width: 800px) { .work-player-header { top: -8px; } }
+
+/* Editable introduction in the open area of the home screen. */
+body:not(.channel-page) .hero-description {
+  top: 39%; right: 12%; left: auto; width: 43%; height: 36%;
+  white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto;
+  scrollbar-width: thin; scrollbar-color: #e95c38 transparent;
+  font: 400 clamp(14px, 1.2vw, 19px)/1.65 'DM Mono', monospace;
+}
+@media (max-width: 800px) and (orientation: portrait) {
+  body:not(.channel-page) .hero-description {
+    top: 64%; left: 10%; right: 10%; width: auto; height: 20%;
+    font-size: 12px; line-height: 1.5;
+  }
+}

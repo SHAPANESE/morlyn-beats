@@ -27,6 +27,15 @@
           <button id="forgot-password" type="button" class="secondary" hidden>OLVIDÉ MI CONTRASEÑA</button>
         </form>
       </section>
+      <section id="home-text-panel" class="panel" hidden>
+        <h2>Texto de portada</h2>
+        <form id="home-text-form">
+          <label>Sobre vos<textarea id="home-text" name="body" rows="7" maxlength="600" aria-describedby="home-text-hint"></textarea></label>
+          <p id="home-text-hint" class="hint">Aparece a la derecha de los canales en la portada. Hasta 600 caracteres. Dejalo vacío para ocultarlo.</p>
+          <button type="submit" disabled>GUARDAR TEXTO</button>
+          <p id="home-text-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
       <section id="upload-panel" class="panel" hidden>
         <div class="panel-heading"><h2>Publicar un trabajo</h2><button id="logout" type="button" class="secondary">SALIR</button></div>
         <form id="upload-form">

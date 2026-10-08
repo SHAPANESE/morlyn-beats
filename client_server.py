@@ -504,7 +504,7 @@ def create_app(data_dir=None, secure=None):
     def existing_asset(filename):
         # Explicit whitelist prevents serving credentials, source, uploads and backups.
         allowed = {"index.html", "video-tv.html", "video-redes.html", "animacion-3d.html", "motion-graphics.html",
-                   "styles.css", "display.css", "admin.css", "admin.js", "admin-cloud.js", "youtube-player.js", "script.js", "portfolio.js", "crt-pipeline.js",
+                   "styles.css", "display.css", "admin.css", "admin.js", "admin-cloud.js", "home-text.js", "youtube-player.js", "script.js", "portfolio.js", "crt-pipeline.js",
                    "three-scene.js", "vhs-clock.js", "backend-config.js", "backend.js", "works.json"}
         is_asset = filename.startswith("assets/") and Path(filename).suffix.lower() in {".ttf", ".woff2", ".svg", ".png", ".jpg", ".webp", ".mp4", ".wav", ".m4a"}
         is_vendor = filename.startswith("vendor/") and Path(filename).suffix.lower() == ".js"

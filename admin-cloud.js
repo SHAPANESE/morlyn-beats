@@ -45,7 +45,10 @@ document.querySelector('#work-file').addEventListener('change', event => {
 document.querySelector('#cloud-upload-limits').textContent = `JPG, PNG, WebP o GIF. Hasta ${Math.round(cloudMax / 1024 ** 2)} MB por imagen; 1 GB de almacenamiento total en Supabase Free.`;
 function cloudHideSession() {
   document.querySelector('#login-panel').hidden = false;
-  ['#upload-panel', '#published-panel', '#account-panel'].forEach(id => document.querySelector(id).hidden = true);
+  ['#home-text-panel', '#upload-panel', '#published-panel', '#account-panel'].forEach(id => document.querySelector(id).hidden = true);
+  document.querySelector('#home-text-form').reset();
+  document.querySelector('#home-text-form [type=submit]').disabled = true;
+  document.querySelector('#home-text-status').textContent = '';
   document.querySelector('#published-works').replaceChildren();
   document.querySelector('#owner-email').textContent = '';
   document.querySelector('#change-password-form').reset();
@@ -108,9 +111,26 @@ async function cloudShowSession() {
     await cloud.auth.signOut({scope: 'local'}); cloudHideSession(); cloudMessage('Esta cuenta no está autorizada para administrar el portfolio.'); return;
   }
   document.querySelector('#login-panel').hidden = true;
-  ['#upload-panel', '#published-panel', '#account-panel'].forEach(id => document.querySelector(id).hidden = false);
+  ['#home-text-panel', '#upload-panel', '#published-panel', '#account-panel'].forEach(id => document.querySelector(id).hidden = false);
   document.querySelector('#owner-email').textContent = session.user.email;
-  await cloudListWorks();
+  await Promise.all([cloudListWorks(), cloudLoadHomeText()]);
+}
+async function cloudLoadHomeText() {
+  const status = document.querySelector('#home-text-status');
+  const button = document.querySelector('#home-text-form [type=submit]');
+  button.disabled = true;
+  try {
+    const result = await cloud.from('portfolio_site_content').select('body').eq('id', 'home').maybeSingle();
+    if (result.error) {
+      status.textContent = ['PGRST205', '42P01'].includes(result.error.code)
+        ? 'La edición de portada todavía no está activada.'
+        : 'No pudimos cargar el texto. Recargá el panel para intentar de nuevo.';
+      return;
+    }
+    document.querySelector('#home-text').value = result.data?.body || '';
+    status.textContent = '';
+    button.disabled = false;
+  } catch { status.textContent = 'No pudimos cargar el texto. Recargá el panel para intentar de nuevo.'; }
 }
 async function cloudSubmit(form, action, statusSelector) {
   const button = form.querySelector('[type=submit]'); button.disabled = true;
@@ -123,6 +143,20 @@ if (!cloud) {
   document.querySelector('#login-form [type=submit]').disabled = true;
   window.morlynLocalReady?.then(local => { if (local) location.replace(local.baseUrl + '/admin.html'); });
 } else {
+  document.querySelector('#home-text-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const status = document.querySelector('#home-text-status');
+    status.textContent = '';
+    cloudSubmit(event.currentTarget, async values => {
+      const body = String(values.get('body') || '').trim();
+      if ([...body].length > 600) throw new Error('El texto puede tener hasta 600 caracteres.');
+      const result = await cloud.from('portfolio_site_content').upsert({id: 'home', body}, {onConflict: 'id'}).select('body').single();
+      if (result.error) throw new Error('No pudimos guardar el texto. Revisá tu conexión e intentá de nuevo.');
+      document.querySelector('#home-text').value = result.data.body;
+      status.textContent = 'Texto de portada guardado.';
+      cloudNotify();
+    }, '#home-text-status');
+  });
   document.querySelector('#forgot-password').hidden = !cloudConfig.passwordRecoveryEnabled;
   cloud.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') {

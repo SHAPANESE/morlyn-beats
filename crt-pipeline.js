@@ -565,7 +565,7 @@ if (output) {
 
       const workTextLines = new WeakMap();
       const drawWorkDescription = player => {
-        const node = player.querySelector('.work-player-description');
+        const node = player.matches('.hero-description') ? player : player.querySelector('.work-player-description');
         if (!node) return;
         const rect = cachedRectOf(node);
         const { style, size, font } = cssFont(node);
@@ -589,6 +589,12 @@ if (output) {
               if (line && sourceContext.measureText(candidate).width > rect.width) {
                 lines.push(line); line = word;
               } else line = candidate;
+              // Keep long names/URLs inside the paragraph as in the HTML fallback.
+              while (sourceContext.measureText(line).width > rect.width && line.length > 1) {
+                let end = line.length - 1;
+                while (end > 1 && sourceContext.measureText(line.slice(0, end)).width > rect.width) end--;
+                lines.push(line.slice(0, end)); line = line.slice(end);
+              }
             }
             lines.push(line);
           }
@@ -709,26 +715,7 @@ if (output) {
         drawLabel(layout.portfolioLink.node, cachedRectOf(layout.portfolioLink.node));
 
         const description = layout.description;
-        if (description.node && description.rect && description.node.textContent.trim()) {
-          const { style, size, font } = cssFont(description.node);
-          sourceContext.font = font;
-          sourceContext.textBaseline = 'top';
-          sourceContext.fillStyle = style.color;
-          const lineHeight = parseFloat(style.lineHeight) || size * 1.7;
-          let line = '';
-          let y = description.rect.top;
-          description.node.textContent.trim().split(/\s+/).forEach((word) => {
-            const next = line ? line + ' ' + word : word;
-            if (line && sourceContext.measureText(next).width > description.rect.width) {
-              sourceContext.fillText(line, description.rect.left, y);
-              y += lineHeight;
-              line = word;
-            } else {
-              line = next;
-            }
-          });
-          if (line) sourceContext.fillText(line, description.rect.left, y);
-        }
+        if (description.node?.textContent.trim()) drawWorkDescription(description.node);
 
         const instagram = { ...layout.instagram, rect: cachedRectOf(layout.instagram.node) };
         const actionActive = actionHit?.matches(':hover, :focus-visible');
@@ -916,6 +903,8 @@ if (output) {
         alignPortfolioCards();
         window.addEventListener('morlyn-portfolio-ready', () => { portfolioNeedsAlignment = true; sourceDirty = true; });
         window.addEventListener('morlyn-work-changed', () => { playerControlLayout = null; rectCache = new WeakMap(); sourceDirty = true; });
+        window.addEventListener('morlyn-home-text-changed', () => { rectCache = new WeakMap(); readLayout(); sourceDirty = true; });
+        document.querySelector('.hero-description')?.addEventListener('scroll', invalidateSource, { passive: true });
         for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout', 'input', 'load', 'loadeddata', 'loadedmetadata', 'seeked', 'volumechange', 'durationchange', 'play', 'pause', 'ended', 'timeupdate', 'error']) document.addEventListener(name, invalidateSource, true);
         document.querySelector('.portfolio-grid')?.addEventListener('scroll', () => { portfolioNeedsAlignment = true; }, { passive: true });
         window.morlynCaptureCrt = () => {

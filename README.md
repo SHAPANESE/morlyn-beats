@@ -29,3 +29,5 @@ Without backend configuration, galleries use `works.json` by channel (01: TV, 02
 Selecting a thumbnail or its caption replaces the gallery with the work inside the same CRT channel. Images, video and controls pass through the screen's existing curvature and texture, while the VHS counter keeps running. Videos have play/pause, seeking, sound and fullscreen controls. Return with "Volver a trabajos" or Escape; leaving stops playback and returns focus to the selected work. Empty placeholders show a clearly labeled demo image until real media is added.
 
 YouTube works use their actual thumbnail with a fallback cover. The embedded player uses a single row with play/pause, seek, sound and fullscreen icons, an uncropped rectangular frame and a decorative CRT layer. It falls back to native controls if the YouTube API is unavailable. Its cross-origin video pixels are not rendered through the WebGL CRT shader.
+
+The dashboard also edits the home introduction (plain text, up to 600 characters). Existing projects must run [supabase-home-text.sql](supabase-home-text.sql) once; new setups include it in supabase-free.sql. An empty introduction hides the block.
