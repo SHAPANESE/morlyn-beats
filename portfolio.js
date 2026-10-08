@@ -14,12 +14,13 @@ if (portfolioGrid) {
         const nx = x * 2 - 1, ny = y * 2 - 1;
         const radius = nx * nx + ny * ny;
         let scale = 1;
+        // Match the page shader's barrel coefficient at every screen size.
+        const curvature = .115;
         for (let step = 0; step < 6; step++) {
-          scale -= (scale + .06 * radius * scale ** 3 - 1) / (1 + .18 * radius * scale ** 2);
+          scale -= (scale + curvature * radius * scale ** 3 - 1) / (1 + 3 * curvature * radius * scale ** 2);
         }
-        // Keep corner clipping inside the player's existing control margins.
-        const px = x * width - nx * (1 - scale) * Math.min(width, 360) / 2;
-        const py = y * height - ny * (1 - scale) * Math.min(height, 260) / 2;
+        const px = (nx * scale + 1) * width / 2;
+        const py = (ny * scale + 1) * height / 2;
         points.push(`${(px / width * 100).toFixed(3)}% ${(py / height * 100).toFixed(3)}%`);
       };
       for (let i = 0; i <= 24; i++) point(i / 24, 0);
