@@ -420,6 +420,12 @@ a, button { cursor: pointer; }
 .firefox-crt .noise {
   display: none;
 }
+.canvas-crt-ready .simple-screen,
+.canvas-crt-ready.firefox-crt .simple-screen {
+  transform: none;
+  clip-path: none;
+  will-change: auto;
+}
 .firefox-crt .screen-rgb,
 .firefox-crt .screen-rgb::before {
   mix-blend-mode: normal;

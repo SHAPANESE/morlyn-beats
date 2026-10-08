@@ -149,7 +149,6 @@ if (output) {
 
       const source = document.createElement('canvas');
       const sourceContext = source.getContext('2d', { alpha: false });
-      const isFirefox = navigator.userAgent.includes('Firefox');
       let renderScale = 1;
       let qualityScale = 1;
       try {
@@ -312,7 +311,7 @@ if (output) {
         viewportHeight = Math.max(window.innerHeight, 1);
         // Keep the CRT render budget bounded on large monitors; its silhouette
         // and scanlines still use CSS screen dimensions, independent of this scale.
-        renderScale = Math.min(isFirefox ? .7 : 1,
+        renderScale = Math.min(1,
           1600 / Math.max(viewportWidth, viewportHeight),
           Math.sqrt(1200000 / (viewportWidth * viewportHeight))) * qualityScale;
         rectCache = new WeakMap();
@@ -872,6 +871,8 @@ if (output) {
         drawSource(0);
         drawShader(0);
         document.documentElement.classList.add('canvas-crt-ready');
+        // Measure the source after its CSS fallback transform is disabled.
+        resize();
         prepareActionHit();
         alignPortfolioCards();
         window.addEventListener('morlyn-portfolio-ready', () => { portfolioNeedsAlignment = true; sourceDirty = true; });
