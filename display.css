@@ -987,9 +987,9 @@ body { overflow: hidden; }
 }
 
 /* Balance the content against the usable area inside the CRT silhouette. */
-body:not(.channel-page) .hero-copy { inset: 15% 9% 22%; }
+body:not(.channel-page) .hero-copy { inset: 13% 9% 22%; }
 body:not(.channel-page) .hero-title { font-size: min(8.6vw, 16vh, 144px); }
-body:not(.channel-page) .service-index { top: 44%; font-size: clamp(14px, 1.25vw, 21px); gap: clamp(12px, 2vh, 20px); }
+body:not(.channel-page) .service-index { top: 46%; font-size: clamp(14px, 1.25vw, 21px); gap: clamp(12px, 2vh, 20px); }
 .channel-page .hero-copy { inset: 13% 10% 13%; }
 .channel-page .hero-actions { position: absolute; top: 8vh; right: 0; bottom: auto; }
 .channel-page .hero-title { font-size: min(4.3vw, 9vh, 76px); }
@@ -1102,7 +1102,7 @@ body:not(.channel-page) .service-index { top: 44%; font-size: clamp(14px, 1.25vw
   .channel-page .portfolio-placeholder-media { height: clamp(28px, calc(13svh - 40px), 45px); }
 }
 @media (max-height: 500px) and (orientation: landscape) {
-  body:not(.channel-page) .hero-copy { top: 15%; }
+  body:not(.channel-page) .hero-copy { top: 13%; }
   .channel-page .hero-actions { top: 8vh; }
   body:not(.channel-page) .hero-title { font-size: 10vh; }
   body:not(.channel-page) .service-index { top: 45%; font-size: 11px; gap: 6px; }
@@ -1140,6 +1140,7 @@ body:not(.channel-page) .hero-description {
   font: 400 clamp(14px, 1.2vw, 19px)/1.65 'DM Mono', monospace;
 }
 @media (max-width: 800px) and (orientation: portrait) {
+  body:not(.channel-page) .hero-copy { top: 12%; }
   body:not(.channel-page):has(.hero-description:not(:empty)) .hero-copy { bottom: 11%; }
   body:not(.channel-page) .hero-description {
     top: 62%; left: 10%; right: 10%; width: auto; height: 22%;
@@ -1148,5 +1149,7 @@ body:not(.channel-page) .hero-description {
   }
 }
 @media (max-width: 800px) and (max-height: 680px) and (orientation: portrait) {
+  body:not(.channel-page) .hero-title { font-size: min(16vw, 8.5vh, 64px); }
+  body:not(.channel-page) .service-index { gap: clamp(12px, 2.1vh, 16px); }
   body:not(.channel-page) .hero-description { top: 66%; height: 18%; }
 }
