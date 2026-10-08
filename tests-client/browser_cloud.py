@@ -126,6 +126,8 @@ def main():
                 text_box = home.locator('.hero-description').bounding_box()
                 assert text_box['x'] >= 0 and text_box['x'] + text_box['width'] <= 390
                 assert text_box['y'] + text_box['height'] < 844
+                instagram_box = home.locator('.primary-action').bounding_box()
+                assert instagram_box['y'] > text_box['y'] + text_box['height']
                 home.screenshot(path=str(ROOT/'tests-client/home-text-mobile.png'))
                 home.set_viewport_size({'width':1440,'height':1000})
                 home.wait_for_timeout(500)

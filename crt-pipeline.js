@@ -564,6 +564,23 @@ if (output) {
       };
 
       const workTextLines = new WeakMap();
+      const drawHomeTextLine = (line, rect, y) => {
+        // Strengthen the glass bend in the central introduction, where the
+        // full-screen shader is subtle. Keep its direction relative to the
+        // screen center, so upper and lower lines follow the same CRT surface.
+        const bend = Math.min(28, rect.width * .04)
+          * Math.max(-1, Math.min(1, (viewportHeight * .5 - y) / (viewportHeight * .16)));
+        let x = 0;
+        for (const character of line) {
+          const progress = x / rect.width;
+          sourceContext.save();
+          sourceContext.translate(rect.left + x, y + bend * progress * progress);
+          sourceContext.transform(1, 2 * bend * progress / rect.width, 0, 1, 0, 0);
+          sourceContext.fillText(character, 0, 0);
+          sourceContext.restore();
+          x += sourceContext.measureText(character).width;
+        }
+      };
       const drawWorkDescription = player => {
         const node = player.matches('.hero-description') ? player : player.querySelector('.work-player-description');
         if (!node) return;
@@ -603,7 +620,11 @@ if (output) {
         }
         cached.lines.forEach((line, index) => {
           const y = rect.top + index * lineHeight - node.scrollTop;
-          if (y + lineHeight >= rect.top && y < rect.bottom) sourceContext.fillText(line, rect.left, y);
+          if (y + lineHeight >= rect.top && y < rect.bottom) {
+            if (viewportWidth > 800 && node.matches('.hero-description') && !document.body.classList.contains('channel-page')) {
+              drawHomeTextLine(line, rect, y);
+            } else sourceContext.fillText(line, rect.left, y);
+          }
         });
         sourceContext.restore();
       };
@@ -903,7 +924,7 @@ if (output) {
         alignPortfolioCards();
         window.addEventListener('morlyn-portfolio-ready', () => { portfolioNeedsAlignment = true; sourceDirty = true; });
         window.addEventListener('morlyn-work-changed', () => { playerControlLayout = null; rectCache = new WeakMap(); sourceDirty = true; });
-        window.addEventListener('morlyn-home-text-changed', () => { rectCache = new WeakMap(); readLayout(); sourceDirty = true; });
+        window.addEventListener('morlyn-home-text-changed', () => { rectCache = new WeakMap(); fontCache = new WeakMap(); readLayout(); updateActionHit(); sourceDirty = true; });
         document.querySelector('.hero-description')?.addEventListener('scroll', invalidateSource, { passive: true });
         for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout', 'input', 'load', 'loadeddata', 'loadedmetadata', 'seeked', 'volumechange', 'durationchange', 'play', 'pause', 'ended', 'timeupdate', 'error']) document.addEventListener(name, invalidateSource, true);
         document.querySelector('.portfolio-grid')?.addEventListener('scroll', () => { portfolioNeedsAlignment = true; }, { passive: true });
