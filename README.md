@@ -22,7 +22,7 @@ See the license files in `vendor/` for third-party code.
 
 ## Portfolio
 
-Each service has its own HTML page with a silent TV static transition. The client upload panel is at `admin.html`; follow [UPLOAD-SETUP.md](UPLOAD-SETUP.md) to connect Supabase and authorize the client. Connected galleries load published works directly from Supabase.
+Each service has its own HTML page with a silent TV static transition. The client panel at `admin.html` supports Supabase Free authentication, image uploads, YouTube links, descriptions, drafts and publication to the four galleries. Follow [UPLOAD-SETUP.md](UPLOAD-SETUP.md) to activate it on Vercel; project URL and publishable key are configured; database setup and client account activation remain pending. Videos use YouTube so they do not consume image Storage. The local server remains available at `http://localhost:4174/cliente` with the original account and files; see [CLIENT_PORTAL.md](CLIENT_PORTAL.md). Run it with `.\.venv\Scripts\python.exe client_server.py serve`. The visual preview on 4173 now uses the configured Supabase project.
 
 Without backend configuration, galleries use `works.json` by channel (01: TV, 02: social media, 03: 3D, 04: motion graphics). Each item accepts type (image or video), src, title, alt and an optional video poster. Store local media under assets/works/.
 

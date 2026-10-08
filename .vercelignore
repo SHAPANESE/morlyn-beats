@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+tests-client/
+client-portal/
+client_server.py
+requirements-client*.txt
+*.log
+*.sql
+CLIENT_PORTAL.md
+UPLOAD-SETUP.md

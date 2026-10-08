@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090908">
+  <title>RAMIRO LYNN · Área del cliente</title>
+  <link rel="stylesheet" href="/client-portal/portal-tokens.css">
+  <link rel="stylesheet" href="/client-portal/portal.css">
+  <script src="/client-portal/portal.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header><a class="brand" href="/">morlyn beats</a><span>ÁREA DEL CLIENTE</span><button id="logout" hidden>Cerrar sesión</button></header>
+  <main id="main">
+    <p id="notice" role="status" aria-live="polite">Conectando…</p>
+    <section id="access" hidden class="access">
+      <div><p class="eyebrow">TU ESPACIO / RAMIRO LYNN</p><h1>Todo tu trabajo.<br>En un lugar.</h1><p class="muted">Subí imágenes y videos, organizalos por sección y elegí qué mostrar en tu portfolio.</p></div>
+      <div class="panel">
+        <form id="login-form">
+          <h2>Ingresá a tu cuenta</h2>
+          <label>Email<input type="email" name="email" autocomplete="username" maxlength="254" required></label>
+          <label>Contraseña<div class="password-field"><input id="login-password" type="password" name="password" autocomplete="current-password" maxlength="256" required><button type="button" data-reveal="login-password" aria-controls="login-password" aria-pressed="false">Mostrar</button></div></label>
+          <label class="check"><input type="checkbox" name="remember">Recordarme en este dispositivo por 30 días</label>
+          <button class="primary" type="submit">Ingresar →</button>
+          <button id="open-recovery" type="button" class="text-button">Olvidé mi contraseña</button>
+        </form>
+        <form id="recovery-form" hidden>
+          <h2>Recuperá tu acceso</h2><p class="muted">Pedile al administrador un código de recuperación. Es de un solo uso y dura 30 minutos.</p>
+          <label>Código de recuperación<input name="code" autocomplete="one-time-code" maxlength="100" required></label>
+          <label>Nueva contraseña<input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="256" required></label>
+          <label>Repetí la nueva contraseña<input type="password" name="confirmation" autocomplete="new-password" minlength="12" maxlength="256" required></label>
+          <p class="muted small">Usá al menos 12 caracteres. Podés usar una frase que recuerdes.</p>
+          <button class="primary" type="submit">Restablecer e ingresar</button><button id="back-login" type="button">Volver al acceso</button>
+        </form>
+      </div>
+    </section>
+    <section id="workspace" hidden>
+      <div class="heading"><div><p class="eyebrow">TU PORTFOLIO / ARCHIVOS</p><h1>Imágenes y videos.</h1><p id="account" class="muted"></p></div><button id="open-security">Cuenta y dispositivos</button></div>
+      <form id="upload-form" class="panel upload-panel">
+        <div><h2>Subí tu próximo trabajo</h2><p class="muted">JPG, PNG, WebP · MP4, MOV, WebM.<br><span id="upload-limits">Imágenes hasta 200 MB. Videos hasta 1 GB y 30 minutos.</span></p></div>
+        <div><label>Sección<select name="section" id="upload-section" required></select></label><label id="drop-zone" class="drop-zone">Elegí archivos o arrastralos acá<input type="file" id="files" multiple accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.webm" required></label><p id="selection" class="muted small">Podés subir varios archivos juntos.</p><label>Texto del trabajo (opcional)<textarea id="upload-description" name="description" rows="4" maxlength="5000" placeholder="Contá de qué trata, qué hiciste o qué querés destacar." aria-describedby="description-help"></textarea></label><p id="description-help" class="muted small">Hasta 5000 caracteres. Si subís varios archivos, el texto se aplica a todos. Después podés editar cada uno.</p><label class="check"><input id="upload-published" name="published" type="checkbox" checked aria-describedby="publication-help">Mostrar en el portfolio al terminar</label><p id="publication-help" class="muted small">El trabajo aparecerá en la sección elegida. Desmarcá esta opción para guardarlo como borrador privado.</p><button id="upload-submit" type="submit" class="primary">Subir y publicar ↑</button></div>
+        <div id="upload-status" hidden><p id="upload-message" role="status"></p><progress id="upload-progress" max="100" value="0" aria-label="Progreso de carga"></progress><ol id="upload-results" aria-live="polite"></ol><a id="view-section" hidden target="_blank" rel="noopener">Ver trabajos en la sección →</a></div>
+      </form>
+      <div class="toolbar"><label>Ver sección<select id="filter"><option value="all">Todas las secciones</option></select></label><p id="storage" class="muted"></p><button id="refresh" type="button">Actualizar</button></div>
+      <p id="empty" class="empty" hidden>Todavía no hay archivos. Subí tu primer trabajo para empezar.</p>
+      <div id="gallery" class="gallery"></div>
+    </section>
+  </main>
+  <dialog id="security-dialog">
+    <div class="dialog-heading"><h2>Cuenta y dispositivos</h2><button type="button" data-close="security-dialog" aria-label="Cerrar">×</button></div>
+    <form id="password-form"><h3>Cambiar contraseña</h3><label>Contraseña actual<input type="password" name="current" autocomplete="current-password" maxlength="256" required></label><label>Nueva contraseña<input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="256" required></label><label>Repetí la nueva contraseña<input type="password" name="confirmation" autocomplete="new-password" minlength="12" maxlength="256" required></label><p class="muted small">Mínimo 12 caracteres. Al cambiarla se cierran las otras sesiones.</p><button class="primary" type="submit">Guardar contraseña</button></form>
+    <h3>Dispositivos conectados</h3><p class="muted small">Podés cerrar un acceso que ya no uses.</p><ul id="sessions" class="sessions"></ul><button id="revoke-others" type="button">Cerrar las otras sesiones</button>
+    <p id="security-message" role="status"></p>
+  </dialog>
+  <dialog id="edit-dialog">
+    <div class="dialog-heading"><h2>Editar archivo</h2><button type="button" data-close="edit-dialog" aria-label="Cerrar">×</button></div>
+    <form id="edit-form"><input name="id" type="hidden"><label>Título<input name="title" maxlength="120" required></label><label>Texto del trabajo (opcional)<textarea name="description" rows="5" maxlength="5000"></textarea></label><label>Sección<select name="section" id="edit-section" required></select></label><label class="check"><input name="published" type="checkbox">Publicar en el portfolio</label><p class="muted small">Al publicar, el archivo y su texto quedan disponibles para visitantes. Al desmarcarlo vuelven a ser privados.</p><button class="primary" type="submit">Guardar cambios</button><p id="edit-message" role="status"></p></form>
+  </dialog>
+  <dialog id="delete-dialog"><h2>¿Eliminar este archivo?</h2><p id="delete-name"></p><p class="muted">Se quitará también del portfolio. Esta acción no se puede deshacer.</p><div class="actions"><button type="button" data-close="delete-dialog">Cancelar</button><button id="confirm-delete" type="button" class="danger">Eliminar archivo</button></div><p id="delete-message" role="status"></p></dialog>
+  <footer>RAMIRO LYNN · TU ESPACIO DE TRABAJO</footer>
+</body>
+</html>

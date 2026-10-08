@@ -441,7 +441,7 @@ if (output) {
           const rect = bounds.media;
           const media = card.querySelector('img, video');
           const active = !!card.querySelector('.work-open') && (card.matches(':hover') || card.contains(document.activeElement));
-          const video = media?.tagName === 'VIDEO' || !!card.querySelector('.placeholder-icon-video');
+          const video = card.dataset.mediaType === 'youtube' || media?.tagName === 'VIDEO' || !!card.querySelector('.placeholder-icon-video');
           sourceContext.save();
           sourceContext.beginPath();
           sourceContext.roundRect(rect.left, rect.top, rect.width, rect.height, 8);
@@ -563,10 +563,48 @@ if (output) {
         sourceContext.restore();
       };
 
+      const workTextLines = new WeakMap();
+      const drawWorkDescription = player => {
+        const node = player.querySelector('.work-player-description');
+        if (!node) return;
+        const rect = cachedRectOf(node);
+        const { style, size, font } = cssFont(node);
+        const lineHeight = parseFloat(style.lineHeight) || size * 1.6;
+        sourceContext.save();
+        sourceContext.font = font;
+        sourceContext.textBaseline = 'top';
+        sourceContext.fillStyle = style.color;
+        sourceContext.shadowBlur = 0;
+        sourceContext.beginPath();
+        sourceContext.rect(rect.left, rect.top, rect.width, rect.height);
+        sourceContext.clip();
+        const key = font + '|' + rect.width + '|' + node.textContent;
+        let cached = workTextLines.get(node);
+        if (!cached || cached.key !== key) {
+          const lines = [];
+          for (const paragraph of node.textContent.split('\n')) {
+            let line = '';
+            for (const word of paragraph.split(/\s+/)) {
+              const candidate = line ? line + ' ' + word : word;
+              if (line && sourceContext.measureText(candidate).width > rect.width) {
+                lines.push(line); line = word;
+              } else line = candidate;
+            }
+            lines.push(line);
+          }
+          cached = { key, lines };
+          workTextLines.set(node, cached);
+        }
+        cached.lines.forEach((line, index) => {
+          const y = rect.top + index * lineHeight - node.scrollTop;
+          if (y + lineHeight >= rect.top && y < rect.bottom) sourceContext.fillText(line, rect.left, y);
+        });
+        sourceContext.restore();
+      };
       const drawWorkPlayer = player => {
         const area = cachedRectOf(player.querySelector('.work-player-media'));
         const media = player.querySelector('img, video');
-        const ready = media.tagName === 'IMG' ? media.complete && media.naturalWidth : media.readyState >= 2;
+        const ready = media && (media.tagName === 'IMG' ? media.complete && media.naturalWidth : media.readyState >= 2);
         if (ready) {
           const width = media.naturalWidth || media.videoWidth;
           const height = media.naturalHeight || media.videoHeight;
@@ -589,6 +627,7 @@ if (output) {
           drawLabel(node, rect, undefined, { tracking: selector === '.work-player-title' ? .02 : selector === '.work-player-time' ? 0 : .08 });
           sourceContext.restore();
         }
+        drawWorkDescription(player);
         const controls = [...player.querySelectorAll('button, input')];
         const key = controls.filter(node => node.tagName === 'BUTTON').map(node => node.textContent).join('|');
         if (playerControlLayout?.player !== player || playerControlLayout.key !== key) {

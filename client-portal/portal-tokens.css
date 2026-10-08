@@ -1,0 +1,17 @@
+:root {
+  color-scheme: dark;
+  --surface-canvas: #090909;
+  --surface-card: #10100f;
+  --surface-inverse: #efd2aa;
+  --text-primary: #efd2aa;
+  --text-secondary: #cdbb9f;
+  --text-muted: #a89883;
+  --border-subtle: #efd2aa33;
+  --color-carbon: #090909;
+  --color-amber-pulse: #e95c38;
+  --color-signal-red: #ff8172;
+  --font-body: system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', Consolas, monospace;
+  --page-gutter: clamp(20px, 4.2vw, 60px);
+  --radius-card: 4px;
+}

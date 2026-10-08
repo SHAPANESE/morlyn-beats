@@ -7,14 +7,15 @@ if (portfolioGrid) {
     if (document.querySelector('.work-player')) return;
     const hero = document.querySelector('.hero');
     const player = document.createElement('section');
-    player.className = 'work-player';
+    const youtube = work.type === 'youtube';
+    player.className = 'work-player' + (youtube ? ' is-youtube' : '');
     player.setAttribute('role', 'region');
     player.setAttribute('aria-label', work.title || 'Trabajo audiovisual');
     const header = document.createElement('div');
     header.className = 'work-player-header';
     const channelLabel = document.createElement('p');
     channelLabel.className = 'work-player-kicker';
-    channelLabel.textContent = 'CANAL ' + channel + ' / ' + (work.type === 'video' ? 'VIDEO' : 'IMAGEN');
+    channelLabel.textContent = 'CANAL ' + channel + ' / ' + (work.type === 'video' || youtube ? 'VIDEO' : 'IMAGEN');
     const back = document.createElement('button');
     back.type = 'button';
     back.className = 'work-player-back';
@@ -22,15 +23,21 @@ if (portfolioGrid) {
     header.append(channelLabel, back);
     const mediaArea = document.createElement('div');
     mediaArea.className = 'work-player-media';
-    const full = document.createElement(work.type === 'video' ? 'video' : 'img');
-    full.crossOrigin = 'anonymous';
-    full.src = work.src;
+    const full = document.createElement(youtube ? 'iframe' : work.type === 'video' ? 'video' : 'img');
+    if (youtube) {
+      full.className = 'work-player-youtube';
+      full.src = window.morlynYouTube.embed(work.videoId);
+      full.title = work.title || 'Video de YouTube';
+      full.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      full.allowFullscreen = true;
+      full.referrerPolicy = 'strict-origin-when-cross-origin';
+    } else { full.crossOrigin = 'anonymous'; full.src = work.src; }
     if (work.type === 'video') {
       full.playsInline = true;
       full.preload = 'auto';
       full.setAttribute('aria-label', work.title || 'Trabajo audiovisual');
       if (work.poster) full.poster = work.poster;
-    } else full.alt = work.alt || work.title || '';
+    } else if (!youtube) full.alt = work.alt || work.title || '';
     const status = document.createElement('p');
     status.className = 'work-player-status';
     status.setAttribute('role', 'status');
@@ -46,6 +53,23 @@ if (portfolioGrid) {
     title.className = 'work-player-title';
     title.textContent = (work.title || 'Trabajo audiovisual').toUpperCase();
     player.append(header, mediaArea, title);
+    if (youtube) {
+      const external = document.createElement('a');
+      external.className = 'work-player-external';
+      external.href = window.morlynYouTube.watch(work.videoId);
+      external.target = '_blank'; external.rel = 'noopener'; external.textContent = 'Abrir en YouTube ↗';
+      player.appendChild(external);
+    }
+    if (work.description) {
+      const description = document.createElement('p');
+      description.className = 'work-player-description';
+      description.textContent = work.description;
+      description.style.whiteSpace = 'pre-wrap';
+      description.style.overflowWrap = 'anywhere';
+      description.tabIndex = 0;
+      description.setAttribute('aria-label', 'Texto del trabajo');
+      player.appendChild(description);
+    }
     const listener = new AbortController();
     const proxy = document.querySelector('.crt-action-hit');
     const copy = document.querySelector('.hero-copy');
@@ -129,22 +153,41 @@ if (portfolioGrid) {
     back.focus({ preventScroll: true });
     if (work.type === 'video') full.play().catch(() => {});
   };
-  const loadWorks = async () => {
+  const loadWorks = async (fresh = false) => {
     if (window.morlynBackend) {
       const { data, error } = await window.morlynBackend.from('portfolio_works')
-        .select('title,media_type,media_path').eq('channel', channel).order('created_at', { ascending: false });
+        .select('id,title,description,media_type,media_path,video_id,published').eq('channel', channel).eq('published', true).order('created_at', { ascending: false });
       if (error) throw error;
+      const paths = data.filter(work => work.media_path).map(work => work.media_path);
+      let signed = [];
+      if (paths.length) {
+        const result = await window.morlynBackend.storage.from(window.MORLYN_BACKEND.bucket).createSignedUrls(paths, 3600);
+        if (result.error || result.data.some(item => !item.signedUrl)) throw result.error || new Error('No se pudieron abrir las imágenes.');
+        signed = result.data;
+      }
       return data.map(work => ({
         title: work.title,
+        description: work.description,
         type: work.media_type,
-        src: window.morlynBackend.storage.from(window.MORLYN_BACKEND.bucket).getPublicUrl(work.media_path).data.publicUrl,
+        videoId: work.video_id,
+        src: work.media_type === 'youtube' ? 'assets/youtube-preview.svg' : signed.find(item => item.path === work.media_path)?.signedUrl,
       }));
     }
+    const local = await (fresh ? window.morlynLoadLocalWorks?.() : window.morlynLocalReady);
+    const uploaded = local ? local.media.filter(work => work.section === channel).map(work => ({
+      title: work.title,
+      description: work.description,
+      type: work.kind,
+      src: local.baseUrl + work.url,
+    })) : [];
+    // Published uploads replace the channel's sample content and placeholders.
+    if (uploaded.length) return uploaded;
     const response = await fetch('works.json', { cache: 'no-store' });
     if (!response.ok) throw new Error('Could not load portfolio');
     return (await response.json())[channel] || [];
   };
-  loadWorks().then(works => {
+  const renderWorks = works => {
+    portfolioGrid.replaceChildren();
     if (!works.length) {
       for (let index = 0; index < 8; index += 1) {
         const type = index % 2 === 0 ? 'video' : 'image';
@@ -181,6 +224,7 @@ if (portfolioGrid) {
     works.forEach(work => {
       const card = document.createElement('figure');
       card.className = 'portfolio-card';
+      card.dataset.mediaType = work.type;
       const media = document.createElement(work.type === 'video' ? 'video' : 'img');
       media.crossOrigin = 'anonymous';
       media.src = work.src;
@@ -200,7 +244,7 @@ if (portfolioGrid) {
       const open = document.createElement('button');
       open.className = 'work-open';
       open.type = 'button';
-      open.setAttribute('aria-label', 'Ver ' + (work.type === 'video' ? 'video' : 'imagen') + ': ' + (work.title || 'Trabajo'));
+      open.setAttribute('aria-label', 'Ver ' + (work.type === 'video' || work.type === 'youtube' ? 'video' : 'imagen') + ': ' + (work.title || 'Trabajo'));
       open.addEventListener('click', () => openWork(work, open));
       card.addEventListener('click', event => { if (event.target !== open) open.click(); });
       mediaWindow.appendChild(open);
@@ -215,10 +259,34 @@ if (portfolioGrid) {
     portfolio.hidden = false;
     emptyMessage.hidden = true;
     window.dispatchEvent(new Event('morlyn-portfolio-ready'));
-  }).catch(error => {
-    console.error(error);
-    portfolio.hidden = false;
-    emptyMessage.hidden = false;
-    emptyMessage.textContent = 'No pudimos cargar los trabajos. Recargá la página para volver a intentar.';
+  };
+  let refreshing = false;
+  let lastWorks = '';
+  const refreshWorks = async (fresh = true) => {
+    if (refreshing || document.querySelector('.work-player')) return;
+    refreshing = true;
+    try {
+      const works = await loadWorks(fresh);
+      const signature = JSON.stringify(works);
+      if (signature !== lastWorks) {
+        renderWorks(works);
+        lastWorks = signature;
+      }
+    } catch (error) {
+      console.error(error);
+      portfolio.hidden = false;
+      emptyMessage.hidden = false;
+      emptyMessage.textContent = 'No pudimos cargar los trabajos. Recargá la página para volver a intentar.';
+    } finally { refreshing = false; }
+  };
+  refreshWorks(false);
+  window.addEventListener('focus', () => refreshWorks());
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshWorks();
   });
+  window.addEventListener('morlyn-work-changed', () => refreshWorks());
+  if ('BroadcastChannel' in window) {
+    const updates = new BroadcastChannel('morlyn-portfolio-updates');
+    updates.addEventListener('message', () => refreshWorks());
+  }
 }

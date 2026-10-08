@@ -14,7 +14,7 @@
         <a href="index.html">← VER SITIO</a>
         <p class="kicker">RAMIRO LYNN / CONTROL DE CANALES</p>
         <h1>TUS TRABAJOS</h1>
-        <p>Elegí una sección y subí sus imágenes o videos. Cada sección tiene su propia galería.</p>
+        <p>Publicá imágenes y videos de YouTube, con su texto, en las cuatro secciones del portfolio.</p>
       </header>
       <p id="admin-status" role="status" aria-live="polite"></p>
       <section id="login-panel" class="panel">
@@ -22,7 +22,9 @@
         <form id="login-form">
           <label>Email<input type="email" name="email" autocomplete="username" required /></label>
           <label>Contraseña<input type="password" name="password" autocomplete="current-password" required /></label>
+          <label class="check"><input type="checkbox" name="remember" />Recordarme en este dispositivo</label>
           <button type="submit">ENTRAR</button>
+          <button id="forgot-password" type="button" class="secondary" hidden>OLVIDÉ MI CONTRASEÑA</button>
         </form>
       </section>
       <section id="upload-panel" class="panel" hidden>
@@ -36,8 +38,11 @@
               <option value="04">04 — Motion graphics</option>
             </select></label>
             <label>Título del trabajo<input name="title" maxlength="160" required /></label>
-            <label class="file-picker">Imagen o video<input id="work-file" type="file" name="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" required /></label>
-            <p class="hint">JPG, PNG, WebP, GIF, MP4 o WebM. Hasta 50 MB por archivo.</p>
+            <label>Texto del trabajo (opcional)<textarea name="description" rows="4" maxlength="5000" placeholder="Contá de qué trata o qué hiciste en este trabajo."></textarea></label>
+            <label>Tipo de trabajo<select id="work-type" name="type"><option value="image">Imagen</option><option value="youtube">Video de YouTube</option></select></label>
+            <div id="image-source"><label class="file-picker">Imagen<input id="work-file" type="file" name="file" accept="image/jpeg,image/png,image/webp,image/gif" required /></label><p id="cloud-upload-limits" class="hint">JPG, PNG, WebP o GIF. Hasta 50 MB por imagen; 1 GB de almacenamiento total en Supabase Free.</p></div>
+            <div id="youtube-source" hidden><label>Enlace del video<input id="youtube-url" type="url" name="youtube_url" placeholder="https://youtu.be/…" /></label><p class="hint">Subí el video a YouTube como «No listado» y pegá su enlace. Debe permitir la reproducción insertada.</p></div>
+            <label class="check"><input name="published" type="checkbox" checked />Mostrar en el portfolio al terminar</label>
             <div id="file-preview" class="file-preview"></div>
             <button type="submit">SUBIR Y PUBLICAR</button>
           </fieldset>
@@ -46,14 +51,19 @@
         <p>Cuando termine la subida, el trabajo aparecerá en la galería del canal.</p>
       </section>
       <section id="published-panel" class="panel" hidden>
-        <h2>Trabajos publicados</h2>
+        <h2>Tus trabajos</h2>
+        <label>Filtrar canal<select id="works-filter"><option value="all">Todos los canales</option><option value="01">Video TV</option><option value="02">Video redes</option><option value="03">Animación 3D</option><option value="04">Motion graphics</option></select></label>
+        <button id="reload-works" class="secondary" type="button">ACTUALIZAR LISTA</button>
         <div id="published-works"></div>
       </section>
+      <section id="account-panel" class="panel" hidden><h2>Cuenta y accesos</h2><p id="owner-email"></p><form id="change-password-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><label>Repetí la nueva contraseña<input name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><button type="submit">CAMBIAR CONTRASEÑA</button></form><p>Podés cerrar los accesos de otros dispositivos que ya no uses.</p><button id="close-other-sessions" type="button" class="secondary">CERRAR OTRAS SESIONES</button></section>
+      <dialog id="edit-work-dialog"><h2>Editar trabajo</h2><form id="edit-work-form"><input name="id" type="hidden" /><label>Título<input name="title" maxlength="160" required /></label><label>Texto<textarea name="description" rows="5" maxlength="5000"></textarea></label><label class="check"><input name="published" type="checkbox" />Mostrar en el portfolio</label><button type="submit">GUARDAR CAMBIOS</button><button id="close-edit" class="secondary" type="button">CANCELAR</button><p id="edit-status" role="status"></p></form></dialog>
+      <dialog id="recovery-dialog"><h2>Nueva contraseña</h2><form id="recovery-password-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><label>Repetí la contraseña<input name="confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="256" required /></label><button type="submit">GUARDAR CONTRASEÑA</button><p id="recovery-status" role="status"></p></form></dialog>
     </main>
     <script src="vendor/supabase-2.117.3.js"></script>
     <script src="vendor/tus-4.3.1.min.js"></script>
     <script src="backend-config.js"></script>
     <script src="backend.js"></script>
-    <script src="admin.js"></script>
+    <script src="admin-cloud.js"></script>
   </body>
 </html>

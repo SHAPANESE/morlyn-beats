@@ -12,8 +12,9 @@ h2 { font-size: 18px; margin: 0 0 24px; }
 form, fieldset { display: grid; gap: 22px; }
 fieldset { min-width: 0; padding: 0; border: 0; margin: 0; }
 label { display: grid; gap: 8px; }
-input, select, button { font: inherit; }
-input, select { width: 100%; min-width: 0; padding: 12px; border: 1px solid #efd2aa55; background: #070707; color: var(--paper); }
+input, select, textarea, button { font: inherit; }
+input, select, textarea { width: 100%; min-width: 0; padding: 12px; border: 1px solid #efd2aa55; background: #070707; color: var(--paper); }
+textarea { resize: vertical; }
 button { padding: 14px 20px; border: 1px solid var(--orange); background: var(--orange); color: #080808; cursor: pointer; font-weight: 500; letter-spacing: .06em; }
 button.secondary { background: transparent; color: var(--paper); padding: 8px 12px; }
 button:disabled { cursor: wait; opacity: .5; }
@@ -26,3 +27,11 @@ progress { width: 100%; height: 14px; accent-color: var(--orange); margin-top: 2
 .published-work { display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid #efd2aa33; padding: 16px 0; overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
 @media (max-width: 500px) { .panel { padding: 20px; } .admin-shell { margin-top: 28px; } .published-work { flex-direction: column; gap: 6px; } }
+.check { display: flex; align-items: center; gap: 12px; }
+.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--orange); }
+.work-details { display: grid; gap: 8px; min-width: 0; }
+.work-details p { white-space: pre-wrap; margin: 0; font-size: 12px; }
+.work-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.work-state { color: var(--orange); font-size: 11px; }
+dialog { width: min(600px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; background: #10100f; color: var(--paper); border: 1px solid #efd2aa55; padding: 28px; }
+dialog::backdrop { background: #000b; }

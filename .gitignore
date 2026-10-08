@@ -2,3 +2,6 @@
 Thumbs.db
 *.log
 *.png
+.venv/
+__pycache__/
+*.pyc
