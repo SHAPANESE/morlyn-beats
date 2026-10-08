@@ -983,6 +983,7 @@ body:not(.channel-page) .hero-copy { inset: 15% 9% 22%; }
 body:not(.channel-page) .hero-title { font-size: min(8.6vw, 16vh, 144px); }
 body:not(.channel-page) .service-index { top: 44%; font-size: clamp(14px, 1.25vw, 21px); gap: clamp(12px, 2vh, 20px); }
 .channel-page .hero-copy { inset: 13% 10% 13%; }
+.channel-page .hero-actions { position: absolute; top: 8vh; right: 0; bottom: auto; }
 .channel-page .hero-title { font-size: min(4.3vw, 9vh, 76px); }
 .channel-page .section-works { top: 28%; bottom: 22%; left: 10%; right: 10%; gap: 20px; }
 .channel-page .portfolio-grid { gap: 18px; padding-right: 4px; }
@@ -1059,6 +1060,7 @@ body:not(.channel-page) .service-index { top: 44%; font-size: clamp(14px, 1.25vw
 .section-works .portfolio-card img, .section-works .portfolio-card video { border: 0; border-radius: 8px; }
 @media (max-width: 800px) {
   body:not(.channel-page) .hero-title { font-size: min(17vw, 10vh, 76px); }
+  .channel-page .hero-actions { top: 10vh; }
   body:not(.channel-page) .service-index { top: 46%; font-size: clamp(11px, 2.9vw, 18px); gap: clamp(9px, 1.5vh, 16px); }
   .channel-page .hero-title { font-size: min(7vw, 7vh, 40px); }
   .channel-page .eyebrow { margin-bottom: 18px; }
@@ -1070,6 +1072,7 @@ body:not(.channel-page) .service-index { top: 44%; font-size: clamp(14px, 1.25vw
 }
 @media (max-height: 500px) and (orientation: landscape) {
   body:not(.channel-page) .hero-copy { top: 15%; }
+  .channel-page .hero-actions { top: 8vh; }
   body:not(.channel-page) .hero-title { font-size: 10vh; }
   body:not(.channel-page) .service-index { top: 45%; font-size: 11px; gap: 6px; }
   .channel-page .hero-copy { top: 10%; }
