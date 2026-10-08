@@ -277,7 +277,7 @@ if (output) {
         actionHit.href = original.href;
         if (original.target) actionHit.target = original.target;
         if (original.rel) actionHit.rel = original.rel;
-        actionHit.setAttribute('aria-label', original.textContent.trim());
+        actionHit.setAttribute('aria-label', original.getAttribute('aria-label') || original.textContent.trim());
         actionHit.addEventListener('click', event => {
           if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
           event.preventDefault();
@@ -755,12 +755,14 @@ if (output) {
 
         const instagram = { ...layout.instagram, rect: cachedRectOf(layout.instagram.node) };
         const actionActive = actionHit?.matches(':hover, :focus-visible');
-        drawLabel(instagram.node, instagram.rect, instagram.node?.textContent?.trim(), {
+        const compactBack = viewportWidth <= 800 && document.body.classList.contains('channel-page');
+        const actionLabel = compactBack ? instagram.node?.querySelector('.home-back-icon') : instagram.node;
+        drawLabel(actionLabel, cachedRectOf(actionLabel), actionLabel?.textContent?.trim(), {
           tracking: 0.1,
           color: actionActive ? '#ff6842' : '#efd2aa',
           glow: actionActive ? 'rgba(233, 92, 56, .65)' : 'rgba(255, 225, 185, .32)',
         });
-        if (instagram.rect) {
+        if (instagram.rect && !compactBack) {
           sourceContext.strokeStyle = actionActive ? '#ff6842' : '#efd2aa';
           sourceContext.globalAlpha = 0.72;
           sourceContext.lineWidth = 1;
