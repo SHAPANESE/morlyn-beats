@@ -183,7 +183,7 @@ def create_app(data_dir=None, secure=None):
             "X-Content-Type-Options": "nosniff",
             "X-Frame-Options": "DENY",
             "Referrer-Policy": "same-origin",
-            "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; img-src 'self' blob: https:; media-src 'self' blob: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
             "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
         })
         if request.path.startswith(("/api/", "/media/", "/cliente", "/admin.html")):

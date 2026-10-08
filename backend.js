@@ -25,6 +25,10 @@
       if (!idPattern.test(id)) throw new Error('Identificador de video inválido.');
       return 'https://www.youtube.com/watch?v=' + id;
     },
+    thumbnail: id => {
+      if (!idPattern.test(id)) throw new Error('Identificador de video inválido.');
+      return 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg';
+    },
   };
   const config = window.MORLYN_BACKEND;
   window.morlynRememberSession = remember => {

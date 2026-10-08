@@ -3,6 +3,35 @@ if (portfolioGrid) {
   const portfolio = portfolioGrid.closest('.portfolio');
   const emptyMessage = document.querySelector('.portfolio-empty');
   const channel = document.body.dataset.channel;
+  const curveYouTube = area => {
+    // Cross-origin iframe pixels cannot be sampled by the page's CRT shader.
+    // Curve the visible glass outline; keep the native player's hit areas intact.
+    const resize = () => {
+      const width = area.clientWidth, height = area.clientHeight;
+      if (!width || !height) return;
+      const points = [];
+      const point = (x, y) => {
+        const nx = x * 2 - 1, ny = y * 2 - 1;
+        const radius = nx * nx + ny * ny;
+        let scale = 1;
+        for (let step = 0; step < 6; step++) {
+          scale -= (scale + .06 * radius * scale ** 3 - 1) / (1 + .18 * radius * scale ** 2);
+        }
+        // Keep corner clipping inside the player's existing control margins.
+        const px = x * width - nx * (1 - scale) * Math.min(width, 360) / 2;
+        const py = y * height - ny * (1 - scale) * Math.min(height, 260) / 2;
+        points.push(`${(px / width * 100).toFixed(3)}% ${(py / height * 100).toFixed(3)}%`);
+      };
+      for (let i = 0; i <= 24; i++) point(i / 24, 0);
+      for (let i = 1; i <= 24; i++) point(1, i / 24);
+      for (let i = 1; i <= 24; i++) point(1 - i / 24, 1);
+      for (let i = 1; i < 24; i++) point(0, 1 - i / 24);
+      area.style.clipPath = 'polygon(' + points.join(',') + ')';
+    };
+    resize();
+    const observer = new ResizeObserver(resize); observer.observe(area);
+    return () => observer.disconnect();
+  };
   const openWork = (work, open) => {
     if (document.querySelector('.work-player')) return;
     const hero = document.querySelector('.hero');
@@ -53,13 +82,6 @@ if (portfolioGrid) {
     title.className = 'work-player-title';
     title.textContent = (work.title || 'Trabajo audiovisual').toUpperCase();
     player.append(header, mediaArea, title);
-    if (youtube) {
-      const external = document.createElement('a');
-      external.className = 'work-player-external';
-      external.href = window.morlynYouTube.watch(work.videoId);
-      external.target = '_blank'; external.rel = 'noopener'; external.textContent = 'Abrir en YouTube ↗';
-      player.appendChild(external);
-    }
     if (work.description) {
       const description = document.createElement('p');
       description.className = 'work-player-description';
@@ -71,12 +93,14 @@ if (portfolioGrid) {
       player.appendChild(description);
     }
     const listener = new AbortController();
+    let releaseCurve = () => {};
     const proxy = document.querySelector('.crt-action-hit');
     const copy = document.querySelector('.hero-copy');
     const close = () => {
       if (work.type === 'video') full.pause();
       if (document.fullscreenElement === hero) document.exitFullscreen().catch(() => {});
       listener.abort();
+      releaseCurve();
       player.remove();
       window.dispatchEvent(new Event('morlyn-work-changed'));
       document.body.classList.remove('work-is-open');
@@ -149,6 +173,7 @@ if (portfolioGrid) {
     if (proxy) proxy.inert = true;
     document.body.classList.add('work-is-open');
     hero.appendChild(player);
+    if (youtube) releaseCurve = curveYouTube(mediaArea);
     window.dispatchEvent(new Event('morlyn-work-changed'));
     back.focus({ preventScroll: true });
     if (work.type === 'video') full.play().catch(() => {});
@@ -170,7 +195,7 @@ if (portfolioGrid) {
         description: work.description,
         type: work.media_type,
         videoId: work.video_id,
-        src: work.media_type === 'youtube' ? 'assets/youtube-preview.svg' : signed.find(item => item.path === work.media_path)?.signedUrl,
+        src: work.media_type === 'youtube' ? window.morlynYouTube.thumbnail(work.video_id) : signed.find(item => item.path === work.media_path)?.signedUrl,
       }));
     }
     const local = await (fresh ? window.morlynLoadLocalWorks?.() : window.morlynLocalReady);
@@ -228,6 +253,9 @@ if (portfolioGrid) {
       const media = document.createElement(work.type === 'video' ? 'video' : 'img');
       media.crossOrigin = 'anonymous';
       media.src = work.src;
+      if (work.type === 'youtube') {
+        media.addEventListener('error', () => { media.src = 'assets/youtube-preview.svg'; }, { once: true });
+      }
       if (work.type === 'video') {
         media.controls = true;
         media.playsInline = true;

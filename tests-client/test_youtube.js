@@ -19,6 +19,8 @@ test('YouTube normalizes supported links without accepting another host or scrip
   for (const url of ['javascript:alert(1)', 'https://youtube.com.attacker.test/watch?v=dQw4w9WgXcQ', 'https://attacker.test/watch?v=dQw4w9WgXcQ', 'https://youtube.com/playlist?list=x', 'https://youtube.com/watch?v=bad', 'https://user@youtube.com/watch?v=dQw4w9WgXcQ', 'https://youtube.com:444/watch?v=dQw4w9WgXcQ']) assert.throws(() => parser(url));
   assert.throws(() => context.window.morlynYouTube.embed('<script>'));
   assert.match(context.window.morlynYouTube.embed('dQw4w9WgXcQ'), /^https:\/\/www\.youtube-nocookie\.com\/embed\//);
+  assert.equal(context.window.morlynYouTube.thumbnail('dQw4w9WgXcQ'), 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg');
+  assert.throws(() => context.window.morlynYouTube.thumbnail('../bad'));
 });
 test('remember me selects one storage and signout clears both', () => {
   const auth = options.auth.storage;
